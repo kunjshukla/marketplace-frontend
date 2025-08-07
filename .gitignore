@@ -1,1 +1,7 @@
 node_modules
+.env.local
+.env
+.DS_Store
+*.log
+*.env.local
+*.env       <|diff_marker|> /home/kunj/Desktop/nft-marketplace/marketplace-frontend/.gitignore
