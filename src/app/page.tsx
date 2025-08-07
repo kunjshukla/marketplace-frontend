@@ -3,16 +3,10 @@
 import { useState, useEffect } from 'react'
 import { NFTCard } from '../components/NFTCard'
 import { FilterBar } from '../components/FilterBar'
-import { PaginationControls } from '../components/PaginationControls'
 import { HeroSection } from '../components/HeroSection'
-import { LoadingSpinner } from '../components/LoadingSpinner'
-import { ErrorBanner } from '../components/ErrorBanner'
-import { EmptyState } from '../components/EmptyState'
-import { StatsBar } from '../components/StatsBar'
-import { FeaturedSection } from '../components/FeaturedSection'
 import { SearchBar } from '../components/SearchBar'
-import { CategoryShowcase } from '../components/CategoryShowcase'
-import { Footer } from '../components/Footer'
+import { LoadingSpinner } from '../components/LoadingSpinner'
+import { NFTDetailModal } from '../components/NFTDetailModal'
 import { apiService } from '../services/api'
 
 const categories = ['art', 'collectible', 'gaming', 'music']
@@ -26,164 +20,151 @@ const sortOptions = [
   { value: 'trending', label: 'Trending' },
 ]
 
-// Fallback data for when API is unavailable
+// Premium fallback NFTs with high-quality placeholders
 const fallbackNFTs = [
   {
     id: 1,
-    title: 'Digital Sunset #001',
-    image_url: 'https://via.placeholder.com/400x400/FF6B6B/FFFFFF?text=Sunset+001',
-    price_inr: 2500,
-    price_usd: 30,
+    title: 'Celestial Harmony #001',
+    image_url: 'https://images.unsplash.com/photo-1634193295627-1cdddf751ebf?w=400&h=400&fit=crop&crop=center',
+    price_inr: 12500,
+    price_usd: 150,
     category: 'art',
     is_sold: false,
     is_reserved: false,
-    creator_name: 'ArtistOne',
-    description: 'A beautiful digital sunset capturing the essence of nature.',
+    creator_name: 'ArtisticVision',
+    description: 'A mesmerizing digital artwork that captures the harmony between celestial bodies and earthly elements.',
   },
   {
     id: 2,
-    title: 'Abstract Dreams #002',
-    image_url: 'https://via.placeholder.com/400x400/4ECDC4/FFFFFF?text=Dreams+002',
-    price_inr: 1800,
-    price_usd: 22,
+    title: 'Neon Dreams #047',
+    image_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=400&fit=crop&crop=center',
+    price_inr: 8900,
+    price_usd: 108,
     category: 'art',
     is_sold: false,
-    is_reserved: true,
-    creator_name: 'DreamMaker',
-    description: 'An abstract piece that explores the realm of dreams.',
+    is_reserved: false,
+    creator_name: 'CyberArtist',
+    description: 'Vibrant neon colors blend with futuristic elements in this captivating digital masterpiece.',
   },
   {
     id: 3,
-    title: 'Cyber Punk Cat #003',
-    image_url: 'https://via.placeholder.com/400x400/45B7D1/FFFFFF?text=Cat+003',
-    price_inr: 3200,
-    price_usd: 38,
-    category: 'collectible',
-    is_sold: true,
-    is_reserved: false,
-    creator_name: 'CyberArtist',
-    description: 'A futuristic cat in a cyberpunk setting.',
+    title: 'Mythical Guardian #12',
+    image_url: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop&crop=center',
+    price_inr: 15750,
+    price_usd: 190,
+    category: 'gaming',
+    is_sold: false,
+    is_reserved: true,
+    creator_name: 'FantasyForge',
+    description: 'A powerful guardian from ancient mythology, rendered in stunning detail with modern digital techniques.',
   },
   {
     id: 4,
-    title: 'Neon Landscape #004',
-    image_url: 'https://via.placeholder.com/400x400/96CEB4/FFFFFF?text=Neon+004',
-    price_inr: 2800,
-    price_usd: 34,
+    title: 'Abstract Emotions #089',
+    image_url: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=400&h=400&fit=crop&crop=center',
+    price_inr: 6800,
+    price_usd: 82,
     category: 'art',
-    is_sold: false,
+    is_sold: true,
     is_reserved: false,
-    creator_name: 'NeonVision',
-    description: 'A vibrant neon landscape with electric colors.',
+    creator_name: 'EmotionWave',
+    description: 'An exploration of human emotions through abstract forms and dynamic color combinations.',
   },
   {
     id: 5,
-    title: 'Space Explorer #005',
-    image_url: 'https://via.placeholder.com/400x400/E74C3C/FFFFFF?text=Space+005',
-    price_inr: 4200,
-    price_usd: 50,
+    title: 'Digital Sculpture #23',
+    image_url: 'https://images.unsplash.com/photo-1617469165786-8007eda4bf80?w=400&h=400&fit=crop&crop=center',
+    price_inr: 22000,
+    price_usd: 265,
     category: 'collectible',
     is_sold: false,
     is_reserved: false,
-    creator_name: 'CosmicArt',
-    description: 'An adventurous space explorer ready for the unknown.',
+    creator_name: 'SculptorX',
+    description: 'A three-dimensional digital sculpture that pushes the boundaries of virtual art creation.',
   },
   {
     id: 6,
-    title: 'Digital Ocean #006',
-    image_url: 'https://via.placeholder.com/400x400/3498DB/FFFFFF?text=Ocean+006',
-    price_inr: 3600,
-    price_usd: 43,
-    category: 'art',
+    title: 'Sonic Waves #156',
+    image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop&crop=center',
+    price_inr: 9500,
+    price_usd: 115,
+    category: 'music',
     is_sold: false,
     is_reserved: false,
-    creator_name: 'OceanicArt',
-    description: 'The tranquility of the ocean captured digitally.',
-  },
+    creator_name: 'SoundVisual',
+    description: 'Visual representation of sound waves transformed into an artistic digital experience.',
+  }
 ]
 
 export default function HomePage() {
   const [nfts, setNfts] = useState([])
   const [filteredNfts, setFilteredNfts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedNFT, setSelectedNFT] = useState(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const itemsPerPage = 12
+  
   const [filters, setFilters] = useState({
     category: 'all',
-    sortBy: 'newest',
-    priceRange: { min: null, max: null },
+    priceRange: {
+      min: null,
+      max: null
+    },
     currency: 'INR' as const,
-    showAvailable: false,
+    sortBy: 'newest',
+    showAvailable: false
   })
-  const [searchQuery, setSearchQuery] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(12)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [error, setError] = useState('')
-  const [useBackend, setUseBackend] = useState(false)
 
-  // Load NFTs from API or fallback to demo data
+  // Load NFTs on component mount
   useEffect(() => {
     loadNFTs()
   }, [])
 
   const loadNFTs = async () => {
-    setIsLoading(true)
-    setError('')
-    
     try {
-      // Try to fetch from backend API
-      const response: any = await apiService.getNFTs({
-        page: 1,
-        limit: 50, // Load more items initially
-      })
+      setLoading(true)
+      setError(null)
       
-      if (response && response.items) {
-        setNfts(response.items)
-        setUseBackend(true)
-        console.log('✅ Connected to backend API:', response.items.length, 'NFTs loaded')
-      } else {
-        throw new Error('Invalid API response')
-      }
+      const data = await apiService.getNFTs() as any[]
+      setNfts(Array.isArray(data) && data.length > 0 ? data : fallbackNFTs)
     } catch (err) {
-      console.log('⚠️ Backend API unavailable, using demo data')
+      console.warn('API failed, using fallback data:', err)
       setNfts(fallbackNFTs)
-      setUseBackend(false)
-      // Don't show error to user, just use fallback data
+      setError(null) // Don't show error for fallback
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
   // Apply filters, search, and sorting
   useEffect(() => {
-    if (!nfts || nfts.length === 0) {
-      setFilteredNfts([])
-      return
-    }
-
     let result = [...nfts]
 
-    // Apply search filter
+    // Apply search
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       result = result.filter(nft => 
         nft.title.toLowerCase().includes(query) ||
-        (nft.creator_name && nft.creator_name.toLowerCase().includes(query)) ||
-        nft.category.toLowerCase().includes(query) ||
-        (nft.description && nft.description.toLowerCase().includes(query))
+        nft.creator_name.toLowerCase().includes(query) ||
+        nft.description.toLowerCase().includes(query) ||
+        nft.category.toLowerCase().includes(query)
       )
     }
 
-    // Filter by category
+    // Apply category filter
     if (filters.category !== 'all') {
       result = result.filter(nft => nft.category === filters.category)
     }
 
-    // Filter by availability
+    // Apply availability filter
     if (filters.showAvailable) {
       result = result.filter(nft => !nft.is_sold && !nft.is_reserved)
     }
 
-    // Filter by price range
+    // Apply price range filter
     if (filters.priceRange.min !== null || filters.priceRange.max !== null) {
       result = result.filter(nft => {
         const price = filters.currency === 'INR' ? nft.price_inr : nft.price_usd
@@ -193,7 +174,7 @@ export default function HomePage() {
       })
     }
 
-    // Sort results
+    // Apply sorting
     switch (filters.sortBy) {
       case 'price_low':
         result.sort((a, b) => {
@@ -218,256 +199,157 @@ export default function HomePage() {
       case 'oldest':
         result.sort((a, b) => a.id - b.id)
         break
-      case 'newest':
-      default:
+      default: // newest
         result.sort((a, b) => b.id - a.id)
-        break
     }
 
     setFilteredNfts(result)
     setCurrentPage(1) // Reset to first page when filters change
   }, [nfts, filters, searchQuery])
 
-  // Get current page items
-  const totalItems = filteredNfts.length
-  const totalPages = Math.ceil(totalItems / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const currentItems = filteredNfts.slice(startIndex, endIndex)
-
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters)
   }
 
-  const handleSearchChange = (query: string) => {
-    setSearchQuery(query)
+  const handleNFTClick = (nft) => {
+    setSelectedNFT(nft)
+    setIsModalOpen(true)
   }
 
-  const handleCategorySelect = (category: string) => {
-    setFilters({ ...filters, category })
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedNFT(null)
   }
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+  // Pagination
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentNFTs = filteredNfts.slice(startIndex, endIndex)
+  const totalPages = Math.ceil(filteredNfts.length / itemsPerPage)
 
-  const handleItemsPerPageChange = (newItemsPerPage) => {
-    setItemsPerPage(newItemsPerPage)
-    setCurrentPage(1)
-  }
-
-  const handlePurchase = async (nftId, currency) => {
-    setIsProcessing(true)
-    setError('')
-
-    try {
-      if (useBackend) {
-        // Try to purchase via API
-        console.log(`🔄 Purchasing NFT ${nftId} with ${currency} via API`)
-        const response: any = await apiService.purchaseNFT(nftId.toString(), currency)
-        console.log('✅ Purchase initiated:', response)
-        
-        // Update local state
-        setNfts(prevNfts =>
-          prevNfts.map(nft =>
-            nft.id === nftId ? { ...nft, is_sold: true } : nft
-          )
-        )
-        
-        alert(`NFT purchase initiated! ${currency === 'INR' ? 'Please scan the QR code to complete payment.' : 'Please complete payment via PayPal.'}`)
-      } else {
-        // Demo mode - simulate purchase
-        console.log(`🔄 Demo purchase: NFT ${nftId} with ${currency}`)
-        
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        
-        // Update local state
-        setNfts(prevNfts =>
-          prevNfts.map(nft =>
-            nft.id === nftId ? { ...nft, is_sold: true } : nft
-          )
-        )
-        
-        alert(`Demo Purchase Successful! NFT purchased with ${currency}. 🎉`)
-      }
-    } catch (error: any) {
-      console.error('Purchase failed:', error)
-      setError(error.message || 'Purchase failed. Please try again.')
-      alert('Purchase failed: ' + (error.message || 'Please try again later.'))
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  const handleRetryConnection = () => {
-    loadNFTs()
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner text="Loading amazing NFTs..." />
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Connection Status Banner */}
-      {!useBackend && (
-        <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-3">
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <HeroSection />
+
+      {/* Search Section */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <SearchBar />
+        </div>
+      </section>
+
+      {/* Main Content */}
+      <section className="pb-20">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          {/* Filter Bar */}
+          <div className="mb-12">
+            <FilterBar
+              filters={filters}
+              onFiltersChange={handleFilterChange}
+              categories={categories}
+              sortOptions={sortOptions}
+            />
+          </div>
+
+          {/* NFT Grid */}
+          {currentNFTs.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-12">
+                {currentNFTs.map((nft, index) => (
+                  <div 
+                    key={nft.id} 
+                    className="fade-in"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <NFTCard {...nft} onClick={() => handleNFTClick(nft)} />
+                  </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="btn-secondary px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const pageNum = i + 1
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`w-10 h-10 rounded-xl font-medium transition-all ${
+                            currentPage === pageNum
+                              ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30'
+                              : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="btn-secondary px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-20">
+              <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-white/5 flex items-center justify-center">
+                <svg className="w-12 h-12 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0118 12a8 8 0 01-2.009-5.197m-4.014 0A7.962 7.962 0 0112 6c-.75 0-1.492.079-2.219.197M3 12a8.001 8.001 0 0114.9-3.6M21 12a8.001 8.001 0 01-14.9 3.6" />
                 </svg>
               </div>
-              <div className="ml-3">
-                <p className="text-sm text-yellow-700">
-                  <strong>Demo Mode:</strong> Backend API unavailable. Using sample data for demonstration.
-                </p>
-              </div>
-            </div>
-            <div className="flex-shrink-0">
-              <button
-                onClick={handleRetryConnection}
-                className="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full transition-colors"
+              <h3 className="text-2xl font-bold text-white mb-2">No NFTs Found</h3>
+              <p className="text-white/60 mb-6">Try adjusting your search or filter criteria</p>
+              <button 
+                onClick={() => {
+                  setFilters({
+                    category: 'all',
+                    priceRange: { min: null, max: null },
+                    currency: 'INR',
+                    sortBy: 'newest',
+                    showAvailable: false
+                  })
+                  setSearchQuery('')
+                }}
+                className="btn-primary"
               >
-                Retry Connection
+                Reset Filters
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Hero Section */}
-      <HeroSection
-        totalNFTs={nfts.length}
-        availableNFTs={nfts.filter(nft => !nft.is_sold && !nft.is_reserved).length}
-        totalCategories={categories.length}
-        isConnected={useBackend}
-        onExplore={() => window.scrollTo({ top: 800, behavior: 'smooth' })}
-      />
-
-      {/* Error Banner */}
-      {error && (
-        <ErrorBanner
-          error={error}
-          onClose={() => setError('')}
-        />
-      )}
-
-      {/* Search Bar */}
-      <SearchBar
-        onSearchChange={handleSearchChange}
-      />
-
-      {/* Category Showcase */}
-      <CategoryShowcase
-        categories={categories}
-        onCategorySelect={handleCategorySelect}
-        selectedCategory={filters.category}
-      />
-
-      {/* Filter Bar & Stats */}
-      <StatsBar
-        totalNFTs={totalItems}
-        availableNFTs={filteredNfts.filter(nft => !nft.is_sold && !nft.is_reserved).length}
-        soldNFTs={filteredNfts.filter(nft => nft.is_sold).length}
-        totalValue={filteredNfts.reduce((sum, nft) => sum + (filters.currency === 'INR' ? nft.price_inr : nft.price_usd), 0)}
-      />
-
-      <FilterBar
-        categories={categories}
-        sortOptions={sortOptions}
-        filters={filters}
-        onFiltersChange={handleFilterChange}
-      />
-
-      {/* Loading State */}
-      {isLoading && (
-        <div className="container mx-auto px-4 py-16">
-          <LoadingSpinner text="Loading NFTs..." />
-        </div>
-      )}
-
-      {/* NFT Grid */}
-      {!isLoading && (
-        <div className="container mx-auto px-4 pb-8">
-          {isProcessing && (
-            <div className="text-center py-8">
-              <LoadingSpinner text="Processing purchase..." />
-            </div>
-          )}
-
-          {totalItems === 0 ? (
-            <EmptyState
-              icon="🎨"
-              title="No NFTs found"
-              description="Try adjusting your filters to see more results"
-              actionLabel="Reset Filters"
-              onAction={() => handleFilterChange({
-                category: 'all',
-                sortBy: 'newest',
-                priceRange: { min: null, max: null },
-                currency: 'INR' as const,
-                showAvailable: false,
-              })}
-            />
-          ) : (
-            <>
-              {/* Featured Section - Show featured NFTs if we have many */}
-              {nfts.length >= 6 && currentPage === 1 && (
-                <FeaturedSection
-                  featuredNFTs={nfts.slice(0, 3)}
-                  onPurchase={handlePurchase}
-                />
-              )}
-
-              {/* Main NFT Grid */}
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                  {filters.category !== 'all' 
-                    ? `${filters.category.charAt(0).toUpperCase() + filters.category.slice(1)} Collection`
-                    : 'All NFTs'
-                  }
-                  <span className="ml-2 text-lg font-normal text-gray-600">
-                    ({totalItems} {totalItems === 1 ? 'item' : 'items'})
-                  </span>
-                </h2>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {currentItems.map((nft) => (
-                    <NFTCard
-                      key={nft.id}
-                      nft={nft}
-                      onPurchase={handlePurchase}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Search and Category Showcase */}
-              <div className="mb-8">
-                <SearchBar
-                  onSearchChange={handleSearchChange}
-                />
-
-              </div>
-            </>
           )}
         </div>
-      )}
-
-      {/* Pagination */}
-      {!isLoading && totalItems > 0 && (
-        <PaginationControls
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={totalItems}
-          itemsPerPage={itemsPerPage}
-          onPageChange={handlePageChange}
-          onItemsPerPageChange={handleItemsPerPageChange}
-        />
-      )}
-
-      {/* Footer */}
-      <Footer />
+      </section>
+      
+      {/* NFT Detail Modal */}
+      <NFTDetailModal
+        nft={selectedNFT}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </div>
   )
 }

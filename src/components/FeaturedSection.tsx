@@ -65,7 +65,12 @@ export function FeaturedSection({ featuredNFTs, onPurchase, className = "" }: Fe
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto px-12">
               {featuredNFTs.slice(currentIndex, currentIndex + 3).map((nft) => (
                 <div key={nft.id} className="transform hover:scale-105 transition-all duration-300">
-                  <NFTCard nft={nft} onPurchase={onPurchase} />
+                  <NFTCard
+                    {...nft}
+                    creator_name={nft.creator_name ?? ""}
+                    description={nft.description ?? ""}
+                    onPurchase={onPurchase}
+                  />
                 </div>
               ))}
             </div>

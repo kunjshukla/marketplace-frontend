@@ -1,9 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { PaymentModal } from './PaymentModal'
 
-interface NFT {
+interface NFTCardProps {
   id: number
   title: string
   image_url: string
@@ -11,192 +10,189 @@ interface NFT {
   price_usd: number
   category: string
   is_sold: boolean
-  is_reserved: boolean
-  creator_name?: string
-  description?: string
-}
-
-interface NFTCardProps {
-  nft: NFT
+  is_reserved?: boolean
+  creator_name: string
+  description: string
+  onClick?: () => void
   onPurchase?: (nftId: number, currency: 'INR' | 'USD') => void
 }
 
-export function NFTCard({ nft, onPurchase }: NFTCardProps) {
-  const [selectedCurrency, setSelectedCurrency] = useState('INR')
-  const [imageError, setImageError] = useState(false)
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
-
-  const getBadgeClass = () => {
-    if (nft.is_sold) return 'bg-red-500 text-white'
-    if (nft.is_reserved) return 'bg-yellow-500 text-black'
-    return 'bg-green-500 text-white'
-  }
-
-  const getBadgeText = () => {
-    if (nft.is_sold) return 'SOLD'
-    if (nft.is_reserved) return 'RESERVED'
-    return 'AVAILABLE'
-  }
-
-  const formatPrice = (price: number, currency: string) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: currency === 'INR' ? 'INR' : 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(price)
-  }
+export function NFTCard({
+  id,
+  title,
+  image_url,
+  price_inr,
+  price_usd,
+  category,
+  is_sold,
+  is_reserved,
+  creator_name,
+  description,
+  onClick,
+  onPurchase
+}: NFTCardProps) {
+  const [currency, setCurrency] = useState<'INR' | 'USD'>('INR')
+  const [imageLoaded, setImageLoaded] = useState(false)
 
   const handlePurchase = () => {
-    if (!nft.is_sold && !nft.is_reserved) {
-      setIsPaymentModalOpen(true)
+    if (onPurchase) {
+      onPurchase(id, currency)
+    } else {
+      console.log('Purchase NFT:', id)
+      // Handle purchase logic
     }
   }
 
-  const handlePaymentComplete = (nftId: number, currency: 'INR' | 'USD') => {
-    setIsPaymentModalOpen(false)
-    if (onPurchase) {
-      onPurchase(nftId, currency)
+  const formatPrice = (price: number, curr: 'INR' | 'USD') => {
+    return curr === 'INR' 
+      ? `₹${price.toLocaleString()}` 
+      : `$${price.toLocaleString()}`
+  }
+
+  const getStatusBadge = () => {
+    if (is_sold) {
+      return <span className="badge-sold px-3 py-1 rounded-full text-xs font-medium">Sold</span>
     }
+    if (is_reserved) {
+      return <span className="badge-reserved px-3 py-1 rounded-full text-xs font-medium">Reserved</span>
+    }
+    return <span className="badge-available px-3 py-1 rounded-full text-xs font-medium">Available</span>
   }
 
   return (
-    <>
-      <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl hover:scale-105 transition-all duration-300 group">
-        {/* NFT Image */}
-        <div className="relative aspect-square overflow-hidden">
-          {!imageError ? (
-            <img
-              src={nft.image_url}
-              alt={nft.title}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-4xl mb-2">🎨</div>
-                <span className="text-gray-500 text-sm">Image not available</span>
-              </div>
-            </div>
-          )}
-          
-          {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          
-          {/* Status Badge */}
-          <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold shadow-lg ${getBadgeClass()}`}>
-            {getBadgeText()}
-          </div>
-
-          {/* Category Tag */}
-          <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs capitalize font-medium">
-            {nft.category}
-          </div>
-
-          {/* Quick action overlay */}
-          {!nft.is_sold && !nft.is_reserved && (
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <button
-                onClick={handlePurchase}
-                className="bg-white text-black px-6 py-2 rounded-full font-semibold hover:bg-gray-100 transition-colors transform translate-y-4 group-hover:translate-y-0 duration-300"
-              >
-                Quick Buy
-              </button>
-            </div>
-          )}
+    <div 
+      className="nft-card group cursor-pointer" 
+      onClick={onClick}
+    >
+      {/* Image Container */}
+      <div className="relative aspect-square overflow-hidden rounded-t-3xl">
+        {!imageLoaded && (
+          <div className="absolute inset-0 skeleton rounded-t-3xl"></div>
+        )}
+        <img
+          src={image_url}
+          alt={title}
+          className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-110 ${
+            imageLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+          onLoad={() => setImageLoaded(true)}
+          onError={(e) => {
+            const target = e.target as HTMLImageElement
+            target.src = `https://via.placeholder.com/400x400/6366F1/FFFFFF?text=${encodeURIComponent(title)}`
+          }}
+        />
+        
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        
+        {/* Status Badge */}
+        <div className="absolute top-4 right-4">
+          {getStatusBadge()}
         </div>
 
-        {/* NFT Details */}
-        <div className="p-5">
-          <div className="mb-3">
-            <h3 className="font-bold text-lg mb-1 text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
-              {nft.title}
-            </h3>
-            
-            {nft.creator_name && (
-              <p className="text-sm text-gray-600 flex items-center">
-                <span className="mr-1">👤</span> by {nft.creator_name}
-              </p>
-            )}
-          </div>
-
-          {nft.description && (
-            <p className="text-sm text-gray-600 mb-4 line-clamp-2 leading-relaxed">
-              {nft.description}
-            </p>
-          )}
-
-          {/* Price Display */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex flex-col">
-              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                {formatPrice(selectedCurrency === 'INR' ? nft.price_inr : nft.price_usd, selectedCurrency)}
-              </span>
-              <span className="text-xs text-gray-500 flex items-center">
-                <span className="mr-1">≈</span>
-                {selectedCurrency === 'INR' 
-                  ? `$${Math.round(nft.price_inr / 83)}` 
-                  : `₹${Math.round(nft.price_usd * 83)}`
-                }
-              </span>
-            </div>
-            
-            {/* Currency Toggle */}
-            {!nft.is_sold && !nft.is_reserved && (
-              <div className="flex bg-gray-50 rounded-lg p-1 border">
-                <button
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
-                    selectedCurrency === 'INR'
-                      ? 'bg-blue-500 text-white shadow-sm'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                  onClick={() => setSelectedCurrency('INR')}
-                >
-                  INR
-                </button>
-                <button
-                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
-                    selectedCurrency === 'USD'
-                      ? 'bg-blue-500 text-white shadow-sm'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                  onClick={() => setSelectedCurrency('USD')}
-                >
-                  USD
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Purchase Button */}
-          <button
-            onClick={handlePurchase}
-            disabled={nft.is_sold || nft.is_reserved}
-            className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${
-              nft.is_sold || nft.is_reserved
-                ? 'bg-gray-100 text-gray-500 cursor-not-allowed border border-gray-200'
-                : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
-            }`}
-          >
-            {nft.is_sold 
-              ? '🔒 Sold Out' 
-              : nft.is_reserved 
-              ? '⏳ Reserved' 
-              : `🛒 Buy Now`
-            }
-          </button>
+        {/* Category Pill */}
+        <div className="absolute top-4 left-4">
+          <span className="category-pill capitalize">
+            {category}
+          </span>
         </div>
+
+        {/* Quick Action Button */}
+        {!is_sold && !is_reserved && (
+          <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation()
+                handlePurchase()
+              }}
+              className="btn-primary px-4 py-2 text-sm rounded-xl shadow-xl"
+            >
+              Buy Now
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Payment Modal */}
-      <PaymentModal
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        nft={nft}
-        currency={selectedCurrency as 'INR' | 'USD'}
-        onPurchaseComplete={handlePaymentComplete}
-      />
-    </>
+      {/* Card Content */}
+      <div className="p-6 space-y-4">
+        {/* Title and Creator */}
+        <div>
+          <h3 className="text-xl font-bold text-white mb-2 line-clamp-1 group-hover:text-indigo-400 transition-colors">
+            {title}
+          </h3>
+          <p className="text-white/60 text-sm flex items-center">
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            by {creator_name}
+          </p>
+        </div>
+
+        {/* Description */}
+        <p className="text-white/70 text-sm line-clamp-2 leading-relaxed">
+          {description}
+        </p>
+
+        {/* Price Section */}
+        <div className="flex items-center justify-between pt-4 border-t border-white/10">
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setCurrency(currency === 'INR' ? 'USD' : 'INR')
+              }}
+              className="text-xs px-2 py-1 rounded-lg bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all font-medium"
+            >
+              {currency}
+            </button>
+            <span className="text-2xl font-bold text-white">
+              {formatPrice(currency === 'INR' ? price_inr : price_usd, currency)}
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={(e) => e.stopPropagation()} 
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-white/60 hover:text-white"
+              title="Add to favorites"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </button>
+            
+            <button
+              onClick={(e) => e.stopPropagation()}
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-white/60 hover:text-white"
+              title="Share"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Action Button */}
+        {!is_sold && !is_reserved ? (
+          <button 
+            onClick={(e) => {
+              e.stopPropagation()
+              handlePurchase()
+            }}
+            className="w-full btn-primary py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            Purchase Now
+          </button>
+        ) : (
+          <button 
+            disabled
+            className="w-full bg-white/5 text-white/40 py-3 rounded-xl font-semibold cursor-not-allowed"
+          >
+            {is_sold ? 'Sold Out' : 'Reserved'}
+          </button>
+        )}
+      </div>
+    </div>
   )
 }

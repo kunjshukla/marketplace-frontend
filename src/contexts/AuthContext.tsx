@@ -104,7 +104,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       // In a real app, this would handle Google OAuth flow
       // For now, we'll simulate it
-      window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`
+      window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/login-google`
     } catch (error) {
       console.error('Google login error:', error)
       throw error

@@ -1,6 +1,6 @@
 import './globals.css'
 import { Providers } from '../components/Providers'
-import { Navbar } from '../components/Navbar-dark'
+import { Navbar } from '../components/Navbar'
 
 export const metadata = {
   title: 'NFT Marketplace - Unique Digital Art',

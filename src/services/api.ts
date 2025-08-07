@@ -142,13 +142,18 @@ class APIService {
   }
 
   // Purchase endpoints
-  async purchaseNFT(nftId: string, currency: 'INR' | 'USD') {
-    return this.request('/purchase', {
+  async purchaseNFT(nftId: string, currency: 'INR' | 'USD', formData?: { name: string; email: string; phone: string }) {
+    const endpoint = currency === 'INR'
+      ? `/purchase/inr/${nftId}`
+      : `/purchase/usd/${nftId}`
+    
+    const body = currency === 'INR' && formData
+      ? { form_data: formData }
+      : undefined
+
+    return this.request(endpoint, {
       method: 'POST',
-      body: JSON.stringify({
-        nft_id: nftId,
-        currency: currency.toLowerCase(),
-      }),
+      body: body ? JSON.stringify(body) : undefined,
     })
   }
 

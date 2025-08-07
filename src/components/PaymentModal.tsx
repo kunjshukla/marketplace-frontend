@@ -23,16 +23,58 @@ export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplet
   const [paymentMethod, setPaymentMethod] = useState('')
   const [qrCode, setQrCode] = useState('')
   const [error, setError] = useState('')
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: ''
+  })
 
   const price = currency === 'INR' ? nft.price_inr : nft.price_usd
   const currencySymbol = currency === 'INR' ? '₹' : '$'
+  const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('auth_token')
 
   const handleConfirmPurchase = async () => {
     setIsProcessing(true)
     setError('')
 
+    // Check if user is logged in
+    if (!isLoggedIn) {
+      setError('You must be logged in to purchase. Please sign in with Google.')
+      setIsProcessing(false)
+      return
+    }
+
+    // Validate form data for INR purchases
+    if (currency === 'INR') {
+      const { name, email, phone } = formData
+      if (!name || !email || !phone) {
+        setError('Please fill in all required fields for INR payment')
+        setIsProcessing(false)
+        return
+      }
+      
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email)) {
+        setError('Please enter a valid email address')
+        setIsProcessing(false)
+        return
+      }
+      
+      // Basic phone validation
+      if (phone.length < 10) {
+        setError('Please enter a valid phone number')
+        setIsProcessing(false)
+        return
+      }
+    }
+
     try {
-      const response: any = await apiService.purchaseNFT(nft.id.toString(), currency)
+      const response: any = await apiService.purchaseNFT(
+        nft.id.toString(), 
+        currency, 
+        currency === 'INR' ? formData : undefined
+      )
       
       if (currency === 'INR') {
         setPaymentMethod('UPI')
@@ -45,7 +87,7 @@ export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplet
 
       setStep(2)
     } catch (err: any) {
-      setError(err.message || 'Failed to initiate purchase')
+      setError(err.message || (err?.response?.detail) || 'Failed to initiate purchase')
     } finally {
       setIsProcessing(false)
     }
