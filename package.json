@@ -25,7 +25,11 @@
     "react-query": "^3.39.3",
     "i18next": "^23.16.4",
     "react-i18next": "^15.1.1",
-    "mixpanel-browser": "^2.55.1"
+    "mixpanel-browser": "^2.55.1",
+    "@paypal/react-paypal-js": "^8.6.0",
+    "jwt-decode": "^4.0.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.2"
   },
   "devDependencies": {
     "@types/node": "^20",

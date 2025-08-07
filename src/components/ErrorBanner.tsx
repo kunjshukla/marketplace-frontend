@@ -5,6 +5,7 @@ interface ErrorBannerProps {
   type?: 'error' | 'warning' | 'info'
   onClose?: () => void
   onRetry?: () => void
+  dismissible?: boolean
   className?: string
 }
 
@@ -13,6 +14,7 @@ export function ErrorBanner({
   type = 'error', 
   onClose, 
   onRetry,
+  dismissible = false,
   className = '' 
 }: ErrorBannerProps) {
   const getStyles = () => {
@@ -89,7 +91,7 @@ export function ErrorBanner({
                 Retry
               </button>
             )}
-            {onClose && (
+            {(onClose || dismissible) && (
               <button
                 onClick={onClose}
                 className={`${styles.icon} hover:opacity-75 transition-opacity`}

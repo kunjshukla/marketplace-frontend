@@ -1,7 +1,28 @@
 'use client'
 
 import { useState } from 'react'
-import { apiService } from '../services/api'
+// import { apiService } from '../services/api' // Service doesn't exist, will implement differently
+
+// Temporary mock implementation for apiService
+const apiService = {
+  purchaseNFT: async (
+    nftId: string,
+    currency: 'INR' | 'USD',
+    formData?: { name: string; email: string; phone: string }
+  ) => {
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (currency === 'INR') {
+      return {
+        qr_code: 'https://via.placeholder.com/192x192.png?text=UPI+QR'
+      };
+    } else {
+      return {
+        payment_url: 'https://paypal.com'
+      };
+    }
+  }
+};
 
 interface PaymentModalProps {
   isOpen: boolean

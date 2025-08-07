@@ -1,13 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { NFTCard } from '../components/NFTCard'
+import NFTCard from '../components/nft/NFTCard'
 import { FilterBar } from '../components/FilterBar'
 import { HeroSection } from '../components/HeroSection'
 import { SearchBar } from '../components/SearchBar'
 import { LoadingSpinner } from '../components/LoadingSpinner'
-import { NFTDetailModal } from '../components/NFTDetailModal'
-import { apiService } from '../services/api'
+import { nftApi } from '../lib/api/nft'
 
 const categories = ['art', 'collectible', 'gaming', 'music']
 const sortOptions = [
@@ -103,8 +102,6 @@ export default function HomePage() {
   const [error, setError] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedNFT, setSelectedNFT] = useState(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
   const itemsPerPage = 12
   
   const [filters, setFilters] = useState({
@@ -128,8 +125,8 @@ export default function HomePage() {
       setLoading(true)
       setError(null)
       
-      const data = await apiService.getNFTs() as any[]
-      setNfts(Array.isArray(data) && data.length > 0 ? data : fallbackNFTs)
+      const response = await nftApi.list({}, 1, 50)
+      setNfts(Array.isArray(response.nfts) && response.nfts.length > 0 ? response.nfts : fallbackNFTs)
     } catch (err) {
       console.warn('API failed, using fallback data:', err)
       setNfts(fallbackNFTs)
@@ -211,16 +208,6 @@ export default function HomePage() {
     setFilters(newFilters)
   }
 
-  const handleNFTClick = (nft) => {
-    setSelectedNFT(nft)
-    setIsModalOpen(true)
-  }
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false)
-    setSelectedNFT(null)
-  }
-
   // Pagination
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
@@ -270,7 +257,7 @@ export default function HomePage() {
                     className="fade-in"
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
-                    <NFTCard {...nft} onClick={() => handleNFTClick(nft)} />
+                    <NFTCard nft={nft} />
                   </div>
                 ))}
               </div>
@@ -345,11 +332,7 @@ export default function HomePage() {
       </section>
       
       {/* NFT Detail Modal */}
-      <NFTDetailModal
-        nft={selectedNFT}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-      />
+      {/* Modal functionality to be implemented later */}
     </div>
   )
 }

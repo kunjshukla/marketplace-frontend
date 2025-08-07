@@ -2,9 +2,12 @@
 
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { LoginModal } from './LoginModal'
+import LoginModal from './LoginModal'
+import { NavLinks } from './common/NavLinks'
+import { Logo } from './common/Logo'
 
 export function Navbar() {
+  console.log("Navbar component loaded");
   const { user, isAuthenticated, logout } = useAuth()
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -20,48 +23,12 @@ export function Navbar() {
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
             <div className="flex items-center">
-              <a href="/" className="flex items-center space-x-3 group">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
-                </div>
-                <div className="gradient-text text-2xl font-bold tracking-tight">
-                  NFT Showcase
-                </div>
-              </a>
+              <Logo />
             </div>
 
             {/* Navigation Links - Desktop */}
             <div className="hidden md:flex items-center space-x-8">
-              <a
-                href="/"
-                className="text-white font-medium hover:text-indigo-400 transition-colors relative group"
-              >
-                Home
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 group-hover:w-full transition-all duration-300"></span>
-              </a>
-              <a
-                href="/collections"
-                className="text-white/70 hover:text-white font-medium transition-colors relative group"
-              >
-                Collections
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 group-hover:w-full transition-all duration-300"></span>
-              </a>
-              <a
-                href="/artists"
-                className="text-white/70 hover:text-white font-medium transition-colors relative group"
-              >
-                Artists
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 group-hover:w-full transition-all duration-300"></span>
-              </a>
-              <a
-                href="/stats"
-                className="text-white/70 hover:text-white font-medium transition-colors relative group"
-              >
-                Stats
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 group-hover:w-full transition-all duration-300"></span>
-              </a>
+              <NavLinks />
             </div>
 
             {/* Right side - Auth buttons */}
@@ -137,30 +104,7 @@ export function Navbar() {
         {isMobileMenuOpen && (
           <div className="md:hidden glass-card border-t border-white/10">
             <div className="px-6 pt-4 pb-6 space-y-4">
-              <a
-                href="/"
-                className="block text-white font-medium hover:text-indigo-400 transition-colors"
-              >
-                Home
-              </a>
-              <a
-                href="/collections"
-                className="block text-white/70 hover:text-white transition-colors"
-              >
-                Collections
-              </a>
-              <a
-                href="/artists"
-                className="block text-white/70 hover:text-white transition-colors"
-              >
-                Artists
-              </a>
-              <a
-                href="/stats"
-                className="block text-white/70 hover:text-white transition-colors"
-              >
-                Stats
-              </a>
+              <NavLinks mobile={isMobileMenuOpen} />
               
               <div className="pt-4 border-t border-white/10">
                 {isAuthenticated && user ? (

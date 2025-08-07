@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { apiService } from '../../../services/api'
+// import { apiService } from '../../../services/api' // Service doesn't exist, will implement auth flow differently
 
 // Force dynamic rendering to prevent static generation
 export const dynamic = 'force-dynamic'
@@ -30,7 +30,7 @@ function AuthCallbackContent() {
           const { access_token, refresh_token, user } = data.data
           
           // Store tokens
-          apiService.setToken(access_token)
+          localStorage.setItem('access_token', access_token)
           localStorage.setItem('refresh_token', refresh_token)
           localStorage.setItem('user_data', JSON.stringify(user))
           

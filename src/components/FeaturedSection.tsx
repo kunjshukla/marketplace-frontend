@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { NFTCard } from './NFTCard'
+import NFTCard from './nft/NFTCard'
 
 interface NFT {
   id: number
@@ -18,11 +18,10 @@ interface NFT {
 
 interface FeaturedSectionProps {
   featuredNFTs: NFT[]
-  onPurchase?: (nftId: number, currency: 'INR' | 'USD') => void
   className?: string
 }
 
-export function FeaturedSection({ featuredNFTs, onPurchase, className = "" }: FeaturedSectionProps) {
+export function FeaturedSection({ featuredNFTs, className = "" }: FeaturedSectionProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
 
   if (!featuredNFTs.length) return null
@@ -66,10 +65,8 @@ export function FeaturedSection({ featuredNFTs, onPurchase, className = "" }: Fe
               {featuredNFTs.slice(currentIndex, currentIndex + 3).map((nft) => (
                 <div key={nft.id} className="transform hover:scale-105 transition-all duration-300">
                   <NFTCard
-                    {...nft}
-                    creator_name={nft.creator_name ?? ""}
-                    description={nft.description ?? ""}
-                    onPurchase={onPurchase}
+                    nft={nft}
+                    showPurchaseButton={true}
                   />
                 </div>
               ))}
