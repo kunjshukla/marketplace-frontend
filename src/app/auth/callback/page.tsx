@@ -14,66 +14,52 @@ function AuthCallbackContent() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const handleCallback = async () => {
-      try {
-        const code = searchParams.get('code')
-        const errorParam = searchParams.get('error')
-
-        if (errorParam) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+    if (code) {
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '')
+      fetch(`${backendUrl}/auth/google/callback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log("Tokens:", data)
+        if (data.success && data.data) {
+          const { access_token, refresh_token, user } = data.data
+          
+          // Store tokens
+          apiService.setToken(access_token)
+          localStorage.setItem('refresh_token', refresh_token)
+          localStorage.setItem('user_data', JSON.stringify(user))
+          
+          // Redirect to home page
+          router.push('/')
+        } else {
           setError('Authentication failed. Please try again.')
           setTimeout(() => {
             router.push('/')
           }, 3000)
-          return
         }
-
-        if (code) {
-          // Send code to backend
-          try {
-            const response: any = await apiService.googleLogin(code)
-            
-            if (response.success && response.data) {
-              const { access_token, refresh_token, user } = response.data
-              
-              // Store tokens
-              apiService.setToken(access_token)
-              localStorage.setItem('refresh_token', refresh_token)
-              localStorage.setItem('user_data', JSON.stringify(user))
-              
-              // Redirect to home page
-              router.push('/')
-            } else {
-              setError('Authentication failed. Please try again.')
-              setTimeout(() => {
-                router.push('/')
-              }, 3000)
-            }
-          } catch (err: any) {
-            console.error('Authentication error:', err)
-            setError(err.message || 'Authentication failed')
-            setTimeout(() => {
-              router.push('/')
-            }, 3000)
-          }
-        } else {
-          setError('No authorization code received')
-          setTimeout(() => {
-            router.push('/')
-          }, 3000)
-        }
-      } catch (err) {
-        console.error('Callback handling error:', err)
-        setError('An error occurred during authentication')
+        setIsProcessing(false)
+      })
+      .catch(err => {
+        console.error(err)
+        setError('Authentication failed. Please try again.')
         setTimeout(() => {
           router.push('/')
         }, 3000)
-      } finally {
         setIsProcessing(false)
-      }
+      });
+    } else {
+      setError('No authorization code received')
+      setTimeout(() => {
+        router.push('/')
+      }, 3000)
+      setIsProcessing(false)
     }
-
-    handleCallback()
-  }, [searchParams, router])
+  }, [router])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
