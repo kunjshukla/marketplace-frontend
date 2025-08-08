@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
+
 // import { apiService } from '../services/api' // Service doesn't exist, will implement differently
 
 // Temporary mock implementation for apiService
@@ -8,7 +10,7 @@ const apiService = {
   purchaseNFT: async (
     nftId: string,
     currency: 'INR' | 'USD',
-    formData?: { name: string; email: string; phone: string }
+    // formData?: { name: string; email: string; phone: string }
   ) => {
     // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -41,14 +43,8 @@ interface PaymentModalProps {
 export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplete }: PaymentModalProps) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [step, setStep] = useState(1) // 1: confirm, 2: payment, 3: success
-  const [paymentMethod, setPaymentMethod] = useState('')
   const [qrCode, setQrCode] = useState('')
   const [error, setError] = useState('')
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: ''
-  })
 
   const price = currency === 'INR' ? nft.price_inr : nft.price_usd
   const currencySymbol = currency === 'INR' ? '₹' : '$'
@@ -67,70 +63,69 @@ export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplet
 
     // Validate form data for INR purchases
     if (currency === 'INR') {
-      const { name, email, phone } = formData
-      if (!name || !email || !phone) {
-        setError('Please fill in all required fields for INR payment')
-        setIsProcessing(false)
-        return
-      }
+      // const { name, email, phone } = formData
+      // if (!name || !email || !phone) {
+      //   setError('Please fill in all required fields for INR payment')
+      //   setIsProcessing(false)
+      //   return
+      // }
       
       // Basic email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(email)) {
-        setError('Please enter a valid email address')
-        setIsProcessing(false)
-        return
-      }
+      // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      // if (!emailRegex.test(email)) {
+      //   setError('Please enter a valid email address')
+      //   setIsProcessing(false)
+      //   return
+      // }
       
       // Basic phone validation
-      if (phone.length < 10) {
-        setError('Please enter a valid phone number')
-        setIsProcessing(false)
-        return
-      }
+      // if (phone.length < 10) {
+      //   setError('Please enter a valid phone number')
+      //   setIsProcessing(false)
+      //   return
+      // }
     }
 
     try {
-      const response: any = await apiService.purchaseNFT(
-        nft.id.toString(), 
-        currency, 
-        currency === 'INR' ? formData : undefined
-      )
-      
+      const response: { qr_code?: string; payment_url?: string } = await apiService.purchaseNFT(
+        nft.id.toString(),
+        currency
+      );
       if (currency === 'INR') {
-        setPaymentMethod('UPI')
-        setQrCode(response.qr_code || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==')
+        setQrCode(response.qr_code || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
       } else {
-        setPaymentMethod('PayPal')
         // In a real app, you would redirect to PayPal
-        window.open(response.payment_url || 'https://paypal.com', '_blank')
+        window.open(response.payment_url || 'https://paypal.com', '_blank');
       }
-
-      setStep(2)
-    } catch (err: any) {
-      setError(err.message || (err?.response?.detail) || 'Failed to initiate purchase')
+      setStep(2);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to initiate purchase');
+      }
     } finally {
-      setIsProcessing(false)
+      setIsProcessing(false);
     }
   }
 
   const handlePaymentComplete = async () => {
-    setIsProcessing(true)
-    setError('')
-
+    setIsProcessing(true);
+    setError('');
     try {
-      // In a real app, this would be called after payment confirmation
-      await new Promise(resolve => setTimeout(resolve, 2000)) // Simulate API call
-      setStep(3)
-      
-      // Call the completion callback
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setStep(3);
       if (onPurchaseComplete) {
-        onPurchaseComplete(nft.id, currency)
+        onPurchaseComplete(nft.id, currency);
       }
-    } catch (err: any) {
-      setError(err.message || 'Payment confirmation failed')
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Payment confirmation failed');
+      }
     } finally {
-      setIsProcessing(false)
+      setIsProcessing(false);
     }
   }
 
@@ -138,7 +133,6 @@ export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplet
     setStep(1)
     setError('')
     setQrCode('')
-    setPaymentMethod('')
     onClose()
   }
 
@@ -173,13 +167,15 @@ export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplet
         {step === 1 && (
           <div>
             <div className="mb-6">
-              <img
+              <Image
                 src={nft.image_url}
                 alt={nft.title}
+                width={600}
+                height={192}
                 className="w-full h-48 object-cover rounded-lg mb-4"
                 onError={(e) => {
-                  const target = e.target as HTMLImageElement
-                  target.src = 'https://via.placeholder.com/400x400/E0E0E0/808080?text=No+Image'
+                  const target = e.target as HTMLImageElement;
+                  target.src = '/images/nft-placeholder.png';
                 }}
               />
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -266,7 +262,7 @@ export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplet
                 <h3 className="text-xl font-semibold mb-4">Scan QR Code to Pay</h3>
                 <div className="bg-white p-4 rounded-lg border-2 border-gray-200 mb-4 inline-block">
                   {qrCode ? (
-                    <img src={qrCode} alt="UPI QR Code" className="w-48 h-48" />
+                    <Image src={qrCode} alt="UPI QR Code" width={192} height={192} className="w-48 h-48" />
                   ) : (
                     <div className="w-48 h-48 bg-gray-100 flex items-center justify-center">
                       <span className="text-gray-500">Loading QR Code...</span>

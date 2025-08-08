@@ -56,7 +56,7 @@ export const useNFTs = () => {
         limit: limit.toString(),
         ...Object.fromEntries(
           Object.entries(filters)
-            .filter(([_, value]) => value !== undefined && value !== '')
+            .filter(([, value]) => value !== undefined && value !== '')
             .map(([key, value]) => [key, value.toString()])
         ),
       });

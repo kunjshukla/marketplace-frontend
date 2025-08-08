@@ -7,7 +7,6 @@ import { NavLinks } from './common/NavLinks'
 import { Logo } from './common/Logo'
 
 export function Navbar() {
-  console.log("Navbar component loaded");
   const { user, isAuthenticated, logout } = useAuth()
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)

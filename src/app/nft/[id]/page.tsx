@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Heart, Share2, ExternalLink, Clock, User, Tag } from 'lucide-react';
 import { useNFTs } from '../../../hooks/useNFTs';
@@ -12,32 +12,33 @@ import { LoadingSpinner } from '../../../components/LoadingSpinner';
 import { ErrorBanner } from '../../../components/ErrorBanner';
 import NFTBuyForm from '../../../components/nft/NFTBuyForm';
 import { PaymentModal } from '../../../components/PaymentModal';
+import Image from 'next/image';
 
 const NFTDetailPage: React.FC = () => {
   const params = useParams();
   const router = useRouter();
   const { fetchNFTById, loading, error } = useNFTs();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   
   const [nft, setNft] = useState<NFT | null>(null);
   const [showBuyForm, setShowBuyForm] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentData, setPaymentData] = useState<any>(null);
+  const [paymentData, setPaymentData] = useState<{ currency: 'INR' | 'USD' } | null>(null);
 
   const nftId = params?.id as string;
+
+  const loadNFT = useCallback(async () => {
+    if (!nftId) return;
+    
+    const nftData = await fetchNFTById(nftId);
+    setNft(nftData);
+  }, [nftId, fetchNFTById]);
 
   useEffect(() => {
     if (nftId) {
       loadNFT();
     }
-  }, [nftId]);
-
-  const loadNFT = async () => {
-    if (!nftId) return;
-    
-    const nftData = await fetchNFTById(nftId);
-    setNft(nftData);
-  };
+  }, [nftId, loadNFT]);
 
   const handleBuyClick = () => {
     if (!isAuthenticated) {
@@ -137,9 +138,11 @@ const NFTDetailPage: React.FC = () => {
           {/* NFT Image */}
           <div className="space-y-4">
             <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 shadow-lg">
-              <img
+              <Image
                 src={nft.image_url}
                 alt={nft.title}
+                width={500}
+                height={500}
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;

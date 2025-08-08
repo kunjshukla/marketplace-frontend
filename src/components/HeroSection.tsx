@@ -1,17 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-
 export function HeroSection() {
-  const [email, setEmail] = useState('')
-
-  const handleEmailSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Handle newsletter signup
-    console.log('Newsletter signup:', email)
-    setEmail('')
-  }
-
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Animated Background */}

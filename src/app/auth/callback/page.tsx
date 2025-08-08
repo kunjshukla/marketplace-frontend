@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 // import { apiService } from '../../../services/api' // Service doesn't exist, will implement auth flow differently
 
 // Force dynamic rendering to prevent static generation
@@ -9,7 +9,6 @@ export const dynamic = 'force-dynamic'
 
 function AuthCallbackContent() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [isProcessing, setIsProcessing] = useState(true)
   const [error, setError] = useState<string | null>(null)
 

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, Clock, AlertCircle, Download, Copy } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { X, CheckCircle, Clock, AlertCircle, Copy } from 'lucide-react';
 import Button from '@/components/common/Button';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import Image from 'next/image';
 
 interface UPIPaymentModalProps {
   isOpen: boolean;
@@ -12,8 +13,8 @@ interface UPIPaymentModalProps {
   amount: number;
   currency: 'INR';
   userEmail: string;
-  onSuccess: (details: any) => void;
-  onError: (error: any) => void;
+  onSuccess: (details: UPIQRStatus) => void;
+  onError: (error: Error) => void;
 }
 
 interface UPIQRStatus {
@@ -23,6 +24,9 @@ interface UPIQRStatus {
   transactionId?: string;
   expiresAt?: string;
   message?: string;
+  amount?: number;
+  currency?: string;
+  paymentMethod?: string;
 }
 
 const UPIPaymentModal: React.FC<UPIPaymentModalProps> = ({
@@ -39,32 +43,48 @@ const UPIPaymentModal: React.FC<UPIPaymentModalProps> = ({
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      generateUPIQR();
-    }
-  }, [isOpen]);
+  // Duplicate pollPaymentStatus removed to fix redeclaration error.
 
-  useEffect(() => {
-    if (qrStatus.expiresAt && qrStatus.status === 'sent') {
-      const interval = setInterval(() => {
-        const now = new Date().getTime();
-        const expiry = new Date(qrStatus.expiresAt!).getTime();
-        const remaining = Math.max(0, expiry - now);
-        
-        setTimeLeft(remaining);
-        
-        if (remaining <= 0) {
-          setQrStatus(prev => ({ ...prev, status: 'expired' }));
-          clearInterval(interval);
+  const pollPaymentStatus = useCallback(async (transactionId: string) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/payment/status/${transactionId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          if (data.status === 'completed') {
+            setQrStatus(prev => ({ ...prev, status: 'completed' }));
+            clearInterval(pollInterval);
+            onSuccess({
+              transactionId,
+              amount,
+              currency,
+              paymentMethod: 'UPI',
+              status: 'completed',
+            });
+          } else if (data.status === 'failed') {
+            setQrStatus(prev => ({ ...prev, status: 'failed', message: 'Payment failed' }));
+            clearInterval(pollInterval);
+            onError(new Error('Payment verification failed'));
+          }
         }
-      }, 1000);
+      } catch (error) {
+        console.error('Payment status polling error:', error);
+      }
+    }, 5000); // Poll every 5 seconds
 
-      return () => clearInterval(interval);
-    }
-  }, [qrStatus.expiresAt, qrStatus.status]);
+    // Stop polling after 15 minutes
+    setTimeout(() => {
+      clearInterval(pollInterval);
+    }, 15 * 60 * 1000);
+  }, [amount, currency, onError, onSuccess]);
 
-  const generateUPIQR = async () => {
+  const generateUPIQR = useCallback(async () => {
     try {
       setQrStatus({ status: 'generating' });
       
@@ -107,46 +127,32 @@ const UPIPaymentModal: React.FC<UPIPaymentModalProps> = ({
       });
       onError(error);
     }
-  };
+  }, [nftId, amount, currency, userEmail, onError, pollPaymentStatus]);
 
-  const pollPaymentStatus = async (transactionId: string) => {
-    const pollInterval = setInterval(async () => {
-      try {
-        const response = await fetch(`/api/payment/status/${transactionId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
+  useEffect(() => {
+    if (isOpen) {
+      generateUPIQR();
+    }
+  }, [isOpen, generateUPIQR]);
 
-        const data = await response.json();
-
-        if (response.ok) {
-          if (data.status === 'completed') {
-            setQrStatus(prev => ({ ...prev, status: 'completed' }));
-            clearInterval(pollInterval);
-            onSuccess({
-              transactionId,
-              amount,
-              currency,
-              paymentMethod: 'UPI',
-              status: 'completed',
-            });
-          } else if (data.status === 'failed') {
-            setQrStatus(prev => ({ ...prev, status: 'failed', message: 'Payment failed' }));
-            clearInterval(pollInterval);
-            onError(new Error('Payment verification failed'));
-          }
+  useEffect(() => {
+    if (qrStatus.expiresAt && qrStatus.status === 'sent') {
+      const interval = setInterval(() => {
+        const now = new Date().getTime();
+        const expiry = new Date(qrStatus.expiresAt!).getTime();
+        const remaining = Math.max(0, expiry - now);
+        
+        setTimeLeft(remaining);
+        
+        if (remaining <= 0) {
+          setQrStatus(prev => ({ ...prev, status: 'expired' }));
+          clearInterval(interval);
         }
-      } catch (error) {
-        console.error('Payment status polling error:', error);
-      }
-    }, 5000); // Poll every 5 seconds
+      }, 1000);
 
-    // Stop polling after 15 minutes
-    setTimeout(() => {
-      clearInterval(pollInterval);
-    }, 15 * 60 * 1000);
-  };
+      return () => clearInterval(interval);
+    }
+  }, [qrStatus.expiresAt, qrStatus.status]);
 
   const formatTimeLeft = (milliseconds: number) => {
     const minutes = Math.floor(milliseconds / (1000 * 60));
@@ -213,9 +219,11 @@ const UPIPaymentModal: React.FC<UPIPaymentModalProps> = ({
 
               {qrStatus.qrImageUrl && (
                 <div className="mb-4">
-                  <img
+                  <Image
                     src={qrStatus.qrImageUrl}
                     alt="UPI QR Code"
+                    width={192}
+                    height={192}
                     className="mx-auto border rounded-lg shadow-sm max-w-48 max-h-48"
                   />
                 </div>
@@ -252,8 +260,7 @@ const UPIPaymentModal: React.FC<UPIPaymentModalProps> = ({
 
               <div className="text-center">
                 <p className="text-sm text-gray-600 mb-4">
-                  Scan the QR code with any UPI app or use the UPI ID above to complete the payment.
-                  We'll automatically verify your payment.
+                  Scan the QR code with any UPI app or use the UPI ID above to complete the payment. We&apos;ll automatically verify your payment.
                 </p>
                 <div className="flex items-center justify-center gap-2 text-orange-600">
                   <Clock size={16} />

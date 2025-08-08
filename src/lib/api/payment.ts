@@ -3,7 +3,7 @@ export interface PayPalPaymentRequest {
   paypal_order_id: string;
   amount: number;
   currency: string;
-  payer_details: any;
+  payer_details: Record<string, unknown>;
 }
 
 export interface UPIQRRequest {

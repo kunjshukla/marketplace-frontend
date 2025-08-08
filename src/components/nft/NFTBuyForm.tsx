@@ -23,7 +23,7 @@ export default function NFTBuyForm({
   onPurchaseError,
   className = '' 
 }: NFTBuyFormProps) {
-  const { user, isAuthenticated } = useAuth()
+  const { isAuthenticated } = useAuth()
   const [selectedPayment, setSelectedPayment] = useState<'INR' | 'USD'>('INR')
   const [isLoading, setIsLoading] = useState(false)
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
@@ -95,7 +95,7 @@ export default function NFTBuyForm({
         <div className="text-4xl mb-3">⏳</div>
         <h3 className="text-lg font-semibold text-yellow-800 mb-2">NFT Reserved</h3>
         <p className="text-yellow-700">This NFT is currently reserved for another buyer.</p>
-        <p className="text-sm text-yellow-600 mt-2">Check back in a few minutes if the purchase isn't completed.</p>
+        <p className="text-sm text-yellow-600 mt-2">Check back in a few minutes if the purchase isn&apos;t completed.</p>
       </div>
     )
   }
@@ -175,8 +175,8 @@ export default function NFTBuyForm({
             </p>
             <p className="text-blue-800">
               {selectedPayment === 'INR' 
-                ? 'After clicking "Buy Now", you\'ll receive a UPI QR code via email. Complete the payment and submit the transaction reference for verification.'
-                : 'You\'ll be redirected to PayPal to complete the payment securely. The NFT will be transferred immediately after successful payment.'
+                ? 'After clicking &quot;Buy Now&quot;, you&apos;ll receive a UPI QR code via email. Complete the payment and submit the transaction reference for verification.'
+                : 'You&apos;ll be redirected to PayPal to complete the payment securely. The NFT will be transferred immediately after successful payment.'
               }
             </p>
           </div>

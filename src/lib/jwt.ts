@@ -8,7 +8,7 @@ export interface JWTPayload {
   name: string;
   iat: number; // Issued at
   exp: number; // Expiration time
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -95,7 +95,7 @@ export const removeToken = (): void => {
 /**
  * Store user data in localStorage
  */
-export const storeUserData = (userData: any): void => {
+export const storeUserData = (userData: Record<string, unknown>): void => {
   if (typeof window !== 'undefined') {
     localStorage.setItem('user', JSON.stringify(userData));
   }
@@ -104,17 +104,11 @@ export const storeUserData = (userData: any): void => {
 /**
  * Retrieve user data from localStorage
  */
-export const getStoredUserData = (): any | null => {
+export const getStoredUserData = (): Record<string, unknown> | null => {
   if (typeof window !== 'undefined') {
     const userData = localStorage.getItem('user');
     if (userData) {
-      try {
-        return JSON.parse(userData);
-      } catch (error) {
-        console.error('Failed to parse stored user data:', error);
-        removeUserData();
-        return null;
-      }
+      return JSON.parse(userData) as Record<string, unknown>;
     }
   }
   return null;
@@ -148,7 +142,7 @@ export const isAuthenticated = (): boolean => {
 /**
  * Get authorization header for API requests
  */
-export const getAuthHeader = (): { Authorization: string } | {} => {
+export const getAuthHeader = (): { Authorization: string } | object => {
   const token = getStoredToken();
   if (token && !isTokenExpired(token)) {
     return { Authorization: `Bearer ${token}` };
@@ -160,7 +154,7 @@ export const getAuthHeader = (): { Authorization: string } | {} => {
  * Auto-refresh token before expiration (if refresh token is available)
  * This is a placeholder for future implementation with refresh tokens
  */
-export const setupTokenRefresh = (onRefresh?: (newToken: string) => void): (() => void) => {
+export const setupTokenRefresh = (): (() => void) => {
   const token = getStoredToken();
   if (!token || isTokenExpired(token)) {
     return () => {}; // No cleanup needed

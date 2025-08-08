@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useContext } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
 
 export interface User {
@@ -40,8 +40,8 @@ export const useAuth = () => {
   useEffect(() => {
     const initializeAuth = () => {
       try {
-        const token = localStorage.getItem('token');
-        const userStr = localStorage.getItem('user');
+        const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+        const userStr = localStorage.getItem('user') || localStorage.getItem('user_data');
 
         if (token && userStr) {
           // Verify token is not expired
@@ -179,17 +179,16 @@ export const useAuth = () => {
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          // Token invalid, logout
+        if (response.status === 401 || response.status === 403) {
           await logout();
           return false;
         }
         throw new Error('Failed to refresh user data');
       }
 
-      const userData: User = await response.json();
+      const wrapper = await response.json();
+      const userData = wrapper.data ? wrapper.data : wrapper; // support both schemas
 
-      // Update localStorage and state
       localStorage.setItem('user', JSON.stringify(userData));
       setAuthState(prev => ({
         ...prev,
@@ -253,7 +252,7 @@ export const useAuth = () => {
     }
   }, [authState.token]);
 
-  const getAuthHeader = useCallback((): { Authorization: string } | {} => {
+  const getAuthHeader = useCallback((): { Authorization: string } | object => {
     if (authState.token && isTokenValid()) {
       return { Authorization: `Bearer ${authState.token}` };
     }

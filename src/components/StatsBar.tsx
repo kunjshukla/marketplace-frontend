@@ -50,7 +50,7 @@ export function StatsBar({
     <div className={`bg-white border-b border-gray-200 ${className}`}>
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {stats.map((stat, index) => (
+          {stats.map((stat) => (
             <div 
               key={stat.label}
               className={`${stat.bgColor} rounded-lg p-4 text-center transition-all duration-300 hover:shadow-md cursor-pointer transform hover:-translate-y-1`}
@@ -59,7 +59,7 @@ export function StatsBar({
               <div className={`text-2xl md:text-3xl font-bold ${stat.color} mb-1`}>
                 {stat.value}
               </div>
-              <div className="text-sm text-gray-600 font-medium">
+              <div className="text-sm text-gray-600">
                 {stat.label}
               </div>
             </div>

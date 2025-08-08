@@ -14,7 +14,7 @@ interface AuthContextType {
   refreshUser: () => Promise<boolean>;
   updateProfile: (updates: Partial<Pick<User, 'name'>>) => Promise<boolean>;
   isTokenValid: () => boolean;
-  getAuthHeader: () => { Authorization: string } | {};
+  getAuthHeader: () => { Authorization: string } | object;
   clearError: () => void;
 }
 

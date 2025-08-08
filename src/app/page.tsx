@@ -19,79 +19,127 @@ const sortOptions = [
   { value: 'trending', label: 'Trending' },
 ]
 
-// Premium fallback NFTs with high-quality placeholders
+// Premium fallback NFTs with local image assets
 const fallbackNFTs = [
   {
-    id: 1,
-    title: 'Celestial Harmony #001',
-    image_url: 'https://images.unsplash.com/photo-1634193295627-1cdddf751ebf?w=400&h=400&fit=crop&crop=center',
-    price_inr: 12500,
-    price_usd: 150,
+    id: 101,
+    title: 'Digital Horizon #001',
+    image_url: '/images/1.png',
+    price_inr: 85000,
+    price_usd: 1020,
     category: 'art',
     is_sold: false,
     is_reserved: false,
-    creator_name: 'ArtisticVision',
-    description: 'A mesmerizing digital artwork that captures the harmony between celestial bodies and earthly elements.',
+    creator_name: 'NFT Studio',
+    description: 'A stunning digital artwork featuring vibrant colors and modern design elements.',
   },
   {
-    id: 2,
-    title: 'Neon Dreams #047',
-    image_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=400&fit=crop&crop=center',
-    price_inr: 8900,
-    price_usd: 108,
-    category: 'art',
-    is_sold: false,
-    is_reserved: false,
-    creator_name: 'CyberArtist',
-    description: 'Vibrant neon colors blend with futuristic elements in this captivating digital masterpiece.',
-  },
-  {
-    id: 3,
-    title: 'Mythical Guardian #12',
-    image_url: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop&crop=center',
-    price_inr: 15750,
-    price_usd: 190,
-    category: 'gaming',
-    is_sold: false,
-    is_reserved: true,
-    creator_name: 'FantasyForge',
-    description: 'A powerful guardian from ancient mythology, rendered in stunning detail with modern digital techniques.',
-  },
-  {
-    id: 4,
-    title: 'Abstract Emotions #089',
-    image_url: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=400&h=400&fit=crop&crop=center',
-    price_inr: 6800,
-    price_usd: 82,
-    category: 'art',
-    is_sold: true,
-    is_reserved: false,
-    creator_name: 'EmotionWave',
-    description: 'An exploration of human emotions through abstract forms and dynamic color combinations.',
-  },
-  {
-    id: 5,
-    title: 'Digital Sculpture #23',
-    image_url: 'https://images.unsplash.com/photo-1617469165786-8007eda4bf80?w=400&h=400&fit=crop&crop=center',
-    price_inr: 22000,
-    price_usd: 265,
+    id: 102,
+    title: 'Cyber Genesis #002',
+    image_url: '/images/2.png',
+    price_inr: 65000,
+    price_usd: 780,
     category: 'collectible',
     is_sold: false,
     is_reserved: false,
-    creator_name: 'SculptorX',
-    description: 'A three-dimensional digital sculpture that pushes the boundaries of virtual art creation.',
+    creator_name: 'Digital Arts',
+    description: 'An exclusive collectible piece from the Cyber Genesis collection.',
   },
   {
-    id: 6,
-    title: 'Sonic Waves #156',
-    image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop&crop=center',
-    price_inr: 9500,
-    price_usd: 115,
+    id: 103,
+    title: 'Abstract Vision #003',
+    image_url: '/images/3.png',
+    price_inr: 42000,
+    price_usd: 505,
+    category: 'art',
+    is_sold: false,
+    is_reserved: false,
+    creator_name: 'Modern Artist',
+    description: 'A unique abstract composition that challenges traditional art boundaries.',
+  },
+  {
+    id: 104,
+    title: 'Neon Dreams #004',
+    image_url: '/images/4.png',
+    price_inr: 32000,
+    price_usd: 385,
+    category: 'art',
+    is_sold: false,
+    is_reserved: false,
+    creator_name: 'Neon Studio',
+    description: 'Vibrant neon-inspired artwork perfect for digital art enthusiasts.',
+  },
+  {
+    id: 105,
+    title: 'Game Avatar #005',
+    image_url: '/images/5.png',
+    price_inr: 28000,
+    price_usd: 335,
+    category: 'gaming',
+    is_sold: false,
+    is_reserved: false,
+    creator_name: 'Game Studios',
+    description: 'A rare gaming avatar with unique attributes and special abilities.',
+  },
+  {
+    id: 106,
+    title: 'Music Visualizer #006',
+    image_url: '/images/6.png',
+    price_inr: 25000,
+    price_usd: 300,
     category: 'music',
     is_sold: false,
     is_reserved: false,
-    creator_name: 'SoundVisual',
-    description: 'Visual representation of sound waves transformed into an artistic digital experience.',
+    creator_name: 'Sound Wave',
+    description: 'An audio-visual NFT that combines music and stunning visual effects.',
+  },
+  {
+    id: 107,
+    title: 'Pixel Art #007',
+    image_url: '/images/7.png',
+    price_inr: 18000,
+    price_usd: 215,
+    category: 'collectible',
+    is_sold: false,
+    is_reserved: false,
+    creator_name: 'Pixel Master',
+    description: 'Classic pixel art style with modern digital techniques.',
+  },
+  {
+    id: 108,
+    title: 'Future Tech #008',
+    image_url: '/images/8.png',
+    price_inr: 35000,
+    price_usd: 420,
+    category: 'art',
+    is_sold: true,
+    is_reserved: false,
+    creator_name: 'Tech Vision',
+    description: 'Futuristic technology-inspired artwork showcasing tomorrow\'s possibilities.',
+  },
+  {
+    id: 109,
+    title: 'Gaming Legend #009',
+    image_url: '/images/9.png',
+    price_inr: 45000,
+    price_usd: 540,
+    category: 'gaming',
+    is_sold: false,
+    is_reserved: true,
+    creator_name: 'Legend Studios',
+    description: 'A legendary gaming NFT with rare attributes and collector value.',
+  },
+  {
+    id: 110,
+    title: 'Digital Masterpiece #010',
+    image_url: '/images/10.png',
+    price_inr: 55000,
+    price_usd: 660,
+    category: 'art',
+    is_sold: false,
+    is_reserved: false,
+    creator_name: 'Master Creator',
+    description: 'A true digital masterpiece combining traditional art concepts with modern technology.',
   }
 ]
 
@@ -99,7 +147,6 @@ export default function HomePage() {
   const [nfts, setNfts] = useState([])
   const [filteredNfts, setFilteredNfts] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const itemsPerPage = 12
@@ -123,14 +170,11 @@ export default function HomePage() {
   const loadNFTs = async () => {
     try {
       setLoading(true)
-      setError(null)
-      
       const response = await nftApi.list({}, 1, 50)
       setNfts(Array.isArray(response.nfts) && response.nfts.length > 0 ? response.nfts : fallbackNFTs)
     } catch (err) {
       console.warn('API failed, using fallback data:', err)
       setNfts(fallbackNFTs)
-      setError(null) // Don't show error for fallback
     } finally {
       setLoading(false)
     }

@@ -1,10 +1,10 @@
 // Authentication API functions
 import { API_ENDPOINTS } from '@/constants/api'
-import { TokenResponse, GoogleOAuthResponse } from '@/types/user'
+import { GoogleOAuthResponse } from '@/types/user'
 
 export class AuthAPI {
   private static getAuthHeaders(): HeadersInit {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
+    const token = typeof window !== 'undefined' ? (localStorage.getItem('token') || localStorage.getItem('access_token')) : null
     return {
       'Content-Type': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` })
@@ -134,14 +134,16 @@ export class AuthAPI {
   /**
    * Verify current token and get user info
    */
-  static async verifyToken(): Promise<any> {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
+  static async verifyToken(): Promise<unknown> {
+    const response = await fetch(API_ENDPOINTS.AUTH.ME, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     })
 
     if (!response.ok) {
-      throw new Error('Token verification failed')
+      let detail = 'Token verification failed'
+      try { const err = await response.json(); detail = err.message || err.detail || detail } catch {}
+      throw new Error(detail)
     }
 
     const result = await response.json()

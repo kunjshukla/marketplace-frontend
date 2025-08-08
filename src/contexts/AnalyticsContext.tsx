@@ -3,44 +3,43 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 
 interface AnalyticsContextType {
-  trackEvent: (eventName: string, properties?: any) => void
-  trackPageView: (pageName: string) => void
-  trackPurchase: (nftId: string, amount: number, currency: string) => void
-  trackNFTView: (nftId: string) => void
-  isAnalyticsEnabled: boolean
-  setAnalyticsEnabled: (enabled: boolean) => void
+  trackEvent: (eventName: string, properties?: Record<string, unknown>) => void;
+  trackPageView: (pageName: string) => void;
+  trackPurchase: (nftId: string, amount: number, currency: string) => void;
+  trackNFTView: (nftId: string) => void;
+  isAnalyticsEnabled: boolean;
+  setAnalyticsEnabled: (enabled: boolean) => void;
 }
 
-const AnalyticsContext = createContext(undefined)
+const AnalyticsContext = createContext<AnalyticsContextType | undefined>(undefined);
 
 interface AnalyticsProviderProps {
-  children: any
+  children: React.ReactNode;
 }
 
 // Initialize Mixpanel (if available)
-let mixpanel: any = null
+let mixpanel: {
+  track?: (event: string, properties?: Record<string, unknown>) => void;
+  track_pageview?: (page: string) => void;
+} | null = null;
 if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_MIXPANEL_TOKEN) {
   try {
-    // In a real app, you would import Mixpanel properly
-    // import mixpanel from 'mixpanel-browser'
-    console.log('Mixpanel would be initialized here with token:', process.env.NEXT_PUBLIC_MIXPANEL_TOKEN)
-    
     // Simulate mixpanel object
     mixpanel = {
-      track: (event: string, properties?: any) => {
-        console.log('Mixpanel track:', event, properties)
+      track: (event: string, properties?: Record<string, unknown>) => {
+        console.log('Mixpanel track:', event, properties);
       },
       track_pageview: (page: string) => {
-        console.log('Mixpanel page view:', page)
+        console.log('Mixpanel page view:', page);
       },
-    }
+    };
   } catch (error) {
-    console.error('Failed to initialize Mixpanel:', error)
+    console.error('Failed to initialize Mixpanel:', error);
   }
 }
 
 export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
-  const [isAnalyticsEnabled, setIsAnalyticsEnabled] = useState(true)
+  const [isAnalyticsEnabled, setIsAnalyticsEnabled] = useState(true);
 
   // Load analytics preference from localStorage
   useEffect(() => {
@@ -55,41 +54,31 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
     localStorage.setItem('analytics_enabled', JSON.stringify(isAnalyticsEnabled))
   }, [isAnalyticsEnabled])
 
-  const trackEvent = (eventName: string, properties?: any) => {
-    if (!isAnalyticsEnabled) return
-
-    console.log('Analytics Event:', eventName, properties)
-    
-    // Track with Mixpanel if available
-    if (mixpanel) {
+  const trackEvent = (eventName: string, properties?: Record<string, unknown>) => {
+    if (!isAnalyticsEnabled) return;
+    console.log('Analytics Event:', eventName, properties);
+    if (mixpanel && typeof mixpanel.track === 'function') {
       mixpanel.track(eventName, {
         timestamp: new Date().toISOString(),
         ...properties,
-      })
+      });
     }
-
-    // Track with Google Analytics if available
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', eventName, properties)
+    if (typeof window !== 'undefined' && typeof (window as { gtag?: (event: string, ...args: unknown[]) => void }).gtag === 'function') {
+      (window as { gtag?: (event: string, ...args: unknown[]) => void }).gtag!('event', eventName, properties);
     }
   }
 
   const trackPageView = (pageName: string) => {
-    if (!isAnalyticsEnabled) return
-
-    console.log('Analytics Page View:', pageName)
-    
-    // Track with Mixpanel
-    if (mixpanel) {
-      mixpanel.track_pageview(pageName)
+    if (!isAnalyticsEnabled) return;
+    console.log('Analytics Page View:', pageName);
+    if (mixpanel && typeof mixpanel.track_pageview === 'function') {
+      mixpanel.track_pageview(pageName);
     }
-
-    // Track with Google Analytics
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('config', process.env.NEXT_PUBLIC_GA_TRACKING_ID, {
+    if (typeof window !== 'undefined' && typeof (window as { gtag?: (event: string, ...args: unknown[]) => void }).gtag === 'function') {
+      (window as { gtag?: (event: string, ...args: unknown[]) => void }).gtag!('config', process.env.NEXT_PUBLIC_GA_TRACKING_ID, {
         page_title: pageName,
         page_location: window.location.href,
-      })
+      });
     }
   }
 
@@ -126,11 +115,11 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
 }
 
 export function useAnalytics() {
-  const context = useContext(AnalyticsContext)
+  const context = useContext(AnalyticsContext);
   if (context === undefined) {
-    throw new Error('useAnalytics must be used within an AnalyticsProvider')
+    throw new Error('useAnalytics must be used within an AnalyticsProvider');
   }
-  return context
+  return context;
 }
 
 // Analytics tracking hooks
@@ -145,17 +134,16 @@ export function usePageTracking() {
 }
 
 export function useEventTracking() {
-  const { trackEvent } = useAnalytics()
-  
+  const { trackEvent } = useAnalytics();
   return {
-    trackClick: (element: string, properties?: any) => {
-      trackEvent('Button Click', { element, ...properties })
+    trackClick: (element: string, properties?: Record<string, unknown>) => {
+      trackEvent('Button Click', { element, ...properties });
     },
     trackSearch: (query: string, results: number) => {
-      trackEvent('Search', { query, results })
+      trackEvent('Search', { query, results });
     },
     trackFilter: (filterType: string, value: string) => {
-      trackEvent('Filter Applied', { filter_type: filterType, value })
+      trackEvent('Filter Applied', { filter_type: filterType, value });
     },
-  }
+  };
 }

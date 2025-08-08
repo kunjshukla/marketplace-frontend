@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle, XCircle, Clock, ArrowLeft, Download, Receipt } from 'lucide-react';
 import { usePayment } from '../../hooks/usePayment';
 import { useNFTs } from '../../hooks/useNFTs';
 import Button from '../../components/common/Button';
-import { LoadingSpinner } from '../../components/LoadingSpinner';
+import Image from 'next/image';
 import { NFT } from '../../types/nft';
 
 const PurchasePage: React.FC = () => {
@@ -16,7 +16,14 @@ const PurchasePage: React.FC = () => {
   const { fetchNFTById } = useNFTs();
   
   const [status, setStatus] = useState<'loading' | 'success' | 'pending' | 'failed'>('loading');
-  const [paymentDetails, setPaymentDetails] = useState<any>(null);
+  const [paymentDetails, setPaymentDetails] = useState<{
+    status: string;
+    transaction_id?: string;
+    amount?: number;
+    currency?: string;
+    payment_method?: string;
+    created_at?: string;
+  } | null>(null);
   const [nft, setNft] = useState<NFT | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,28 +31,11 @@ const PurchasePage: React.FC = () => {
   const nftId = searchParams?.get('nft_id');
   const paymentMethod = searchParams?.get('payment_method');
 
-  useEffect(() => {
-    if (transactionId) {
-      checkPurchaseStatus();
-    } else {
-      setStatus('failed');
-      setError('Invalid purchase link');
-    }
-  }, [transactionId]);
-
-  useEffect(() => {
-    if (nftId) {
-      loadNFT();
-    }
-  }, [nftId]);
-
-  const checkPurchaseStatus = async () => {
+  const checkPurchaseStatus = useCallback(async () => {
     if (!transactionId) return;
-
     try {
       const paymentStatus = await checkPaymentStatus(transactionId);
       setPaymentDetails(paymentStatus);
-
       switch (paymentStatus.status) {
         case 'completed':
           setStatus('success');
@@ -53,7 +43,6 @@ const PurchasePage: React.FC = () => {
         case 'pending':
         case 'processing':
           setStatus('pending');
-          // Continue polling for status updates
           setTimeout(checkPurchaseStatus, 5000);
           break;
         case 'failed':
@@ -69,18 +58,32 @@ const PurchasePage: React.FC = () => {
       setStatus('failed');
       setError(err instanceof Error ? err.message : 'Failed to check payment status');
     }
-  };
+  }, [transactionId, checkPaymentStatus]);
 
-  const loadNFT = async () => {
+  const loadNFT = useCallback(async () => {
     if (!nftId) return;
-    
     try {
       const nftData = await fetchNFTById(nftId);
       setNft(nftData);
     } catch (err) {
       console.error('Failed to load NFT details:', err);
     }
-  };
+  }, [nftId, fetchNFTById]);
+
+  useEffect(() => {
+    if (transactionId) {
+      checkPurchaseStatus();
+    } else {
+      setStatus('failed');
+      setError('Invalid purchase link');
+    }
+  }, [transactionId, checkPurchaseStatus]);
+
+  useEffect(() => {
+    if (nftId) {
+      loadNFT();
+    }
+  }, [nftId, loadNFT]);
 
   const handleDownloadReceipt = () => {
     // TODO: Implement receipt download functionality
@@ -211,9 +214,11 @@ const PurchasePage: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">NFT Details</h3>
               <div className="flex gap-4">
                 <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                  <img
+                  <Image
                     src={nft.image_url}
                     alt={nft.title}
+                    width={80}
+                    height={80}
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;

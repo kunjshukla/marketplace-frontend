@@ -85,7 +85,7 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
     }
   };
 
-  const onErrorHandler = (err: any) => {
+  const onErrorHandler = (err: unknown) => {
     console.error('PayPal payment error:', err);
     onError(err);
     setLoading(false);

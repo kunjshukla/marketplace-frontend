@@ -7,7 +7,7 @@ export interface PayPalPaymentData {
   paypalOrderId: string;
   amount: number;
   currency: string;
-  payerDetails: any;
+  payerDetails: Record<string, unknown>;
 }
 
 export interface UPIPaymentData {
