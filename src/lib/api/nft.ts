@@ -34,7 +34,20 @@ export interface PurchaseResponse {
   message: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Helper to normalize image URLs to go through Next.js proxy (/images/* -> backend /static/*)
+const normalizeImageUrl = (raw?: string): string => {
+  if (!raw) return '/images/1.png';
+  try {
+    if (/^https?:\/\//i.test(raw)) return raw; // absolute URL
+    if (raw.startsWith('/static/')) return raw.replace('/static/', '/images/');
+    if (raw.startsWith('static/')) return raw.replace('static/', '/images/');
+    if (raw.startsWith('/images/')) return raw;
+    if (/^\w+\.(png|jpe?g|gif|webp)$/i.test(raw)) return `/images/${raw}`;
+    return raw;
+  } catch {
+    return '/images/1.png';
+  }
+};
 
 export const nftApi = {
   /**
@@ -45,30 +58,48 @@ export const nftApi = {
     page: number = 1,
     limit: number = 12
   ): Promise<NFTListResponse> {
+    // Backend expects skip/limit; keep page for client pagination
+    const skip = Math.max(0, (page - 1) * limit);
     const params = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString(),
-      ...Object.fromEntries(
-        Object.entries(filters)
-          .filter(([, value]) => value !== undefined && value !== '')
-          .map(([key, value]) => [key, value.toString()])
-      ),
+      skip: String(skip),
+      limit: String(limit),
     });
+    if (filters.category) params.set('category', filters.category);
+    if (filters.search) params.set('search', filters.search);
 
-    const response = await fetch(`${API_BASE_URL}/nft/list?${params.toString()}`);
+    // Use relative /api path so Next.js rewrites proxy to backend
+    const response = await fetch(`/api/nft/list?${params.toString()}`);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch NFTs: ${response.statusText}`);
     }
 
-    return response.json();
+    const wrapper = await response.json();
+    const payload = wrapper?.data || wrapper; // unwrap { success, data }
+    const items: NFT[] = Array.isArray(payload?.nfts)
+      ? payload.nfts.map((n: any) => ({
+          ...n,
+          image_url: normalizeImageUrl(n?.image_url),
+        }))
+      : [];
+    const total = Number(payload?.total || items.length);
+
+    return {
+      nfts: items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    };
   },
 
   /**
    * Fetch a single NFT by ID
    */
   async getById(id: string): Promise<NFT> {
-    const response = await fetch(`${API_BASE_URL}/nft/${id}`);
+    const response = await fetch(`/api/nft/${id}`);
 
     if (!response.ok) {
       if (response.status === 404) {
@@ -77,7 +108,12 @@ export const nftApi = {
       throw new Error(`Failed to fetch NFT: ${response.statusText}`);
     }
 
-    return response.json();
+    const wrapper = await response.json();
+    const data = wrapper?.data || wrapper; // unwrap { success, data }
+    return {
+      ...data,
+      image_url: normalizeImageUrl(data?.image_url),
+    } as NFT;
   },
 
   /**
@@ -91,14 +127,16 @@ export const nftApi = {
       limit: limit.toString(),
     });
 
-    const response = await fetch(`${API_BASE_URL}/nft/search?${params.toString()}`);
+    const response = await fetch(`/api/nft/search?${params.toString()}`);
 
     if (!response.ok) {
       throw new Error(`Search failed: ${response.statusText}`);
     }
 
-    const result = await response.json();
-    return result.nfts || [];
+    const wrapper = await response.json();
+    const payload = wrapper?.data || wrapper;
+    const list = Array.isArray(payload?.nfts) ? payload.nfts : [];
+    return list.map((n: any) => ({ ...n, image_url: normalizeImageUrl(n?.image_url) }));
   },
 
   /**
@@ -108,28 +146,32 @@ export const nftApi = {
     purchaseData: PurchaseRequest,
     token: string
   ): Promise<PurchaseResponse> {
-    const response = await fetch(`${API_BASE_URL}/nft/buy`, {
+    // Backend route is /api/nft/{nft_id}/buy with body { payment_mode }
+    const response = await fetch(`/api/nft/${purchaseData.nft_id}/buy`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify(purchaseData),
+      body: JSON.stringify({
+        payment_mode: purchaseData.currency,
+      }),
     });
 
+    const wrapper = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Purchase failed');
+      const msg = wrapper?.detail || wrapper?.message || 'Purchase failed';
+      throw new Error(msg);
     }
 
-    return response.json();
+    return wrapper as PurchaseResponse;
   },
 
   /**
    * Get user's purchased NFTs
    */
   async getUserPurchases(token: string): Promise<NFT[]> {
-    const response = await fetch(`${API_BASE_URL}/nft/my-purchases`, {
+    const response = await fetch(`/api/nft/my-purchases`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -139,36 +181,41 @@ export const nftApi = {
       throw new Error(`Failed to fetch purchases: ${response.statusText}`);
     }
 
-    const result = await response.json();
-    return result.nfts || [];
+    const wrapper = await response.json();
+    const payload = wrapper?.data || wrapper;
+    const list = Array.isArray(payload?.nfts) ? payload.nfts : [];
+    return list.map((n: any) => ({ ...n, image_url: normalizeImageUrl(n?.image_url) }));
   },
 
   /**
    * Get NFT categories
    */
   async getCategories(): Promise<string[]> {
-    const response = await fetch(`${API_BASE_URL}/nft/categories`);
+    const response = await fetch(`/api/nft/categories`);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch categories: ${response.statusText}`);
     }
 
-    const result = await response.json();
-    return result.categories || [];
+    const wrapper = await response.json();
+    const payload = wrapper?.data || wrapper;
+    return payload?.categories || [];
   },
 
   /**
    * Get featured NFTs
    */
   async getFeatured(): Promise<NFT[]> {
-    const response = await fetch(`${API_BASE_URL}/nft/featured`);
+    const response = await fetch(`/api/nft/featured`);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch featured NFTs: ${response.statusText}`);
     }
 
-    const result = await response.json();
-    return result.nfts || [];
+    const wrapper = await response.json();
+    const payload = wrapper?.data || wrapper;
+    const list = Array.isArray(payload?.nfts) ? payload.nfts : [];
+    return list.map((n: any) => ({ ...n, image_url: normalizeImageUrl(n?.image_url) }));
   },
 
   /**
@@ -180,12 +227,13 @@ export const nftApi = {
     total_revenue: number;
     average_price: number;
   }> {
-    const response = await fetch(`${API_BASE_URL}/nft/stats`);
+    const response = await fetch(`/api/nft/stats`);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch NFT stats: ${response.statusText}`);
     }
 
-    return response.json();
+    const wrapper = await response.json();
+    return (wrapper?.data || wrapper) as any;
   },
 };

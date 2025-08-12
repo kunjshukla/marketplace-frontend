@@ -17,6 +17,21 @@ const nextConfig = {
     NEXT_PUBLIC_MIXPANEL_TOKEN: process.env.NEXT_PUBLIC_MIXPANEL_TOKEN,
     NEXT_PUBLIC_THIRDWEB_CLIENT_ID: process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID,
   },
+  async rewrites() {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    return [
+      // Proxy backend API routes
+      {
+        source: '/api/:path*',
+        destination: `${apiBase}/api/:path*`,
+      },
+      // Proxy backend-served images
+      {
+        source: '/images/:path*',
+        destination: `${apiBase}/static/:path*`,
+      },
+    ];
+  },
 }
 
 module.exports = nextConfig

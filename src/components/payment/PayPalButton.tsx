@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
-import { usePayment } from '@/hooks/usePayment';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 interface PayPalButtonProps {
@@ -23,65 +22,81 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
   onCancel
 }) => {
   const [loading, setLoading] = useState(false);
-  const { processPayPalPayment } = usePayment();
+  const [clientIdState, setClientIdState] = useState<string>(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '');
 
+  useEffect(() => {
+    if (!clientIdState) {
+      // fetch from backend helper endpoint
+      fetch('/api/payment/paypal/client-id')
+        .then((r) => r.json())
+        .then((d) => {
+          if (d?.client_id) setClientIdState(d.client_id);
+        })
+        .catch(() => {/* ignore */});
+    }
+  }, [clientIdState]);
+
+  const clientId = clientIdState;
   const paypalOptions = {
-    clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '',
+    clientId,
     currency: currency,
     intent: 'capture',
-  };
+  } as const;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const createOrder = async (data: any, actions: any) => {
+  const createOrder = async () => {
     setLoading(true);
     try {
-      return actions.order.create({
-        purchase_units: [
-          {
-            amount: {
-              value: amount.toString(),
-              currency_code: currency,
-            },
-            description: `NFT Purchase - ID: ${nftId}`,
-          },
-        ],
+      const response = await fetch('/api/payment/paypal/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nft_id: nftId,
+          amount: amount.toString(),
+          currency,
+          return_url: window.location.origin + '/purchase/success',
+          cancel_url: window.location.origin + '/purchase/cancel',
+        })
       });
-    } catch (error) {
-      console.error('Error creating PayPal order:', error);
-      onError(error);
-    } finally {
+      const data = await response.json();
       setLoading(false);
+      if (data && data.order && data.order.id) {
+        return data.order.id;
+      } else {
+        onError(new Error(data.message || 'Could not create PayPal order'));
+        return '';
+      }
+    } catch (error) {
+      setLoading(false);
+      onError(error);
+      return '';
     }
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const onApprove = async (data: any, actions: any) => {
+  const onApprove = async (data: any) => {
     setLoading(true);
     try {
-      const details = await actions.order.capture();
-      
-      // Process payment through backend
-      const result = await processPayPalPayment({
-        nftId,
-        paypalOrderId: details.id,
-        amount,
-        currency,
-        payerDetails: details.payer,
+      const response = await fetch('/api/payment/paypal/capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderID: data.orderID,
+          nft_id: nftId,
+          buyer_email: '',
+          buyer_name: '',
+        })
       });
-
+      const result = await response.json();
+      setLoading(false);
       if (result.success) {
-        onSuccess({
-          ...details,
-          backendResult: result,
-        });
+        onSuccess(result);
       } else {
-        onError(new Error('Payment processing failed'));
+        onError(new Error(result.message || 'PayPal capture failed'));
       }
     } catch (error) {
-      console.error('Error processing PayPal payment:', error);
-      onError(error);
-    } finally {
       setLoading(false);
+      onError(error);
     }
   };
 
@@ -97,11 +112,11 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
     setLoading(false);
   };
 
-  if (!paypalOptions['client-id']) {
+  if (!clientId) {
     return (
       <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
         <p className="text-red-700 text-sm">
-          PayPal client ID not configured. Please check environment variables.
+          PayPal client ID not configured. Please set NEXT_PUBLIC_PAYPAL_CLIENT_ID or configure backend /api/payment/paypal/client-id.
         </p>
       </div>
     );

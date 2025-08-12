@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Heart, Share2, ExternalLink, Clock, User, Tag } from 'lucide-react';
 import { useNFTs } from '../../../hooks/useNFTs';
-// Update the path below to the correct relative location of AuthContext
 import { useAuth } from '../../../contexts/AuthContext';
 import { NFT } from '../../../types/nft';
 import Button from '../../../components/common/Button';
@@ -13,6 +12,8 @@ import { ErrorBanner } from '../../../components/ErrorBanner';
 import NFTBuyForm from '../../../components/nft/NFTBuyForm';
 import { PaymentModal } from '../../../components/PaymentModal';
 import Image from 'next/image';
+import LoginModal from '../../../components/LoginModal';
+import { getFallbackById } from '../../../data/fallback-nfts';
 
 const NFTDetailPage: React.FC = () => {
   const params = useParams();
@@ -23,14 +24,19 @@ const NFTDetailPage: React.FC = () => {
   const [nft, setNft] = useState<NFT | null>(null);
   const [showBuyForm, setShowBuyForm] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentData, setPaymentData] = useState<{ currency: 'INR' | 'USD' } | null>(null);
+  const [paymentData, setPaymentData] = useState<{ currency: 'INR' | 'USD'; transactionId?: number } | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
 
   const nftId = params?.id as string;
 
   const loadNFT = useCallback(async () => {
     if (!nftId) return;
-    
     const nftData = await fetchNFTById(nftId);
+    if (!nftData) {
+      const local = getFallbackById(nftId);
+      setNft(local);
+      return;
+    }
     setNft(nftData);
   }, [nftId, fetchNFTById]);
 
@@ -42,36 +48,27 @@ const NFTDetailPage: React.FC = () => {
 
   const handleBuyClick = () => {
     if (!isAuthenticated) {
-      // Redirect to login or show login modal
-      router.push('/auth/login');
+      setShowLogin(true);
       return;
     }
-
-    if (nft?.status === 'sold') {
-      return;
-    }
-
+    if (!nft || nft.status !== 'available') return;
     setShowBuyForm(true);
   };
 
-  const handlePurchaseStart = (paymentMode: 'INR' | 'USD') => {
+  const handlePurchaseStart = (paymentMode: 'INR' | 'USD', transactionId?: number) => {
     if (!nft) return;
-    
-    // Set up payment data and show payment modal
-    setPaymentData({ currency: paymentMode });
+    setPaymentData({ currency: paymentMode, transactionId });
     setShowBuyForm(false);
     setShowPaymentModal(true);
   };
 
   const handlePurchaseError = (error: string) => {
     console.error('Purchase error:', error);
-    // Could show an error toast/banner here
   };
 
   const handlePaymentComplete = () => {
     setShowPaymentModal(false);
     setPaymentData(null);
-    // Refresh NFT data to update status
     loadNFT();
   };
 
@@ -87,9 +84,7 @@ const NFTDetailPage: React.FC = () => {
         console.log('Error sharing:', error);
       }
     } else {
-      // Fallback: copy to clipboard
       navigator.clipboard.writeText(window.location.href);
-      // TODO: Show toast notification
     }
   };
 
@@ -141,8 +136,8 @@ const NFTDetailPage: React.FC = () => {
               <Image
                 src={nft.image_url}
                 alt={nft.title}
-                width={500}
-                height={500}
+                width={800}
+                height={800}
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
@@ -162,18 +157,10 @@ const NFTDetailPage: React.FC = () => {
                 <Share2 size={16} />
                 Share
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="inline-flex items-center gap-2"
-              >
+              <Button variant="outline" size="sm" className="inline-flex items-center gap-2">
                 <Heart size={16} />
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="inline-flex items-center gap-2"
-              >
+              <Button variant="outline" size="sm" className="inline-flex items-center gap-2">
                 <ExternalLink size={16} />
               </Button>
             </div>
@@ -212,14 +199,12 @@ const NFTDetailPage: React.FC = () => {
             {/* Status */}
             <div className="flex items-center gap-2">
               <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
-                nft.status === 'available' 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-red-100 text-red-800'
+                nft.status === 'available' ? 'bg-green-100 text-green-800' : nft.status === 'reserved' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
               }`}>
                 <div className={`w-2 h-2 rounded-full ${
-                  nft.status === 'available' ? 'bg-green-500' : 'bg-red-500'
+                  nft.status === 'available' ? 'bg-green-500' : nft.status === 'reserved' ? 'bg-yellow-500' : 'bg-red-500'
                 }`} />
-                {nft.status === 'available' ? 'Available' : 'Sold'}
+                {nft.status === 'available' ? 'Available' : nft.status === 'reserved' ? 'Reserved' : 'Sold'}
               </div>
               {nft.created_at && (
                 <div className="flex items-center gap-1 text-sm text-gray-500">
@@ -290,8 +275,12 @@ const NFTDetailPage: React.FC = () => {
           nft={nft}
           currency={paymentData.currency}
           onPurchaseComplete={handlePaymentComplete}
+          transactionId={paymentData.transactionId}
         />
       )}
+
+      {/* Login Modal */}
+      <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
     </>
   );
 };

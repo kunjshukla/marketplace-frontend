@@ -217,10 +217,10 @@ const UPIPaymentModal: React.FC<UPIPaymentModalProps> = ({
                 </p>
               </div>
 
-              {qrStatus.qrImageUrl && (
+              {(qrStatus.transactionId || qrStatus.qrImageUrl) && (
                 <div className="mb-4">
                   <Image
-                    src={qrStatus.qrImageUrl}
+                    src={qrStatus.transactionId ? `/api/payment/upi/qr/${qrStatus.transactionId}` : qrStatus.qrImageUrl}
                     alt="UPI QR Code"
                     width={192}
                     height={192}

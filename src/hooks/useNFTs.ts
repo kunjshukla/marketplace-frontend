@@ -31,6 +31,25 @@ export interface PurchaseData {
   email?: string;
 }
 
+const normalizeImageUrl = (raw?: string): string => {
+  if (!raw) return '/images/1.png';
+  try {
+    // If absolute URL, return as is
+    if (/^https?:\/\//i.test(raw)) return raw;
+    // If backend static path, proxy via Next.js rewrite
+    if (raw.startsWith('/static/')) return raw.replace('/static/', '/images/');
+    if (raw.startsWith('static/')) return raw.replace('static/', '/images/');
+    // If already proxied path
+    if (raw.startsWith('/images/')) return raw;
+    // If it's just a filename, serve from /images
+    if (/^\w+\.(png|jpe?g|gif|webp)$/i.test(raw)) return `/images/${raw}`;
+    // Default fallback
+    return raw;
+  } catch {
+    return '/images/1.png';
+  }
+};
+
 export const useNFTs = () => {
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [loading, setLoading] = useState(false);
@@ -42,6 +61,25 @@ export const useNFTs = () => {
     totalPages: 0,
   });
 
+  const mapNFT = (n: any): NFT => ({
+    id: n.id,
+    title: n.title,
+    description: n.description,
+    image_url: normalizeImageUrl(n.image_url),
+    price_inr: typeof n.price_inr === 'number' ? n.price_inr : parseFloat(n.price_inr || '0'),
+    price_usd: typeof n.price_usd === 'number' ? n.price_usd : parseFloat(n.price_usd || '0'),
+    category: n.category,
+    is_sold: !!n.is_sold,
+    is_reserved: !!n.is_reserved,
+    status: n.is_sold ? 'sold' : (n.is_reserved ? 'reserved' : 'available'),
+    creator_name: n.creator_name,
+    attributes: n.attributes,
+    reserved_at: n.reserved_at,
+    sold_at: n.sold_at,
+    owner_id: n.owner_id,
+    created_at: n.created_at || new Date().toISOString(),
+  });
+
   const fetchNFTs = useCallback(async (
     filters: NFTFilters = {},
     page: number = 1,
@@ -51,15 +89,13 @@ export const useNFTs = () => {
     setError(null);
 
     try {
+      const skip = (page - 1) * limit;
       const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-        ...Object.fromEntries(
-          Object.entries(filters)
-            .filter(([, value]) => value !== undefined && value !== '')
-            .map(([key, value]) => [key, value.toString()])
-        ),
+        skip: String(skip),
+        limit: String(limit),
       });
+      if (filters.category) params.set('category', filters.category);
+      if (filters.search) params.set('search', filters.search);
 
       const response = await fetch(`/api/nft/list?${params.toString()}`);
 
@@ -67,12 +103,26 @@ export const useNFTs = () => {
         throw new Error('Failed to fetch NFTs');
       }
 
-      const data: NFTListResponse = await response.json();
+      const wrapper = await response.json();
+      const payload = wrapper?.data || wrapper; // unwrap { success, data }
+      const items = Array.isArray(payload?.nfts) ? payload.nfts : [];
+      const mapped = items.map(mapNFT);
+      const total = Number(payload?.total || mapped.length);
 
-      setNfts(data.nfts);
-      setPagination(data.pagination);
+      setNfts(mapped);
+      setPagination({
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      });
 
-      return data;
+      return { nfts: mapped, pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      }};
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch NFTs';
       setError(errorMessage);
@@ -96,7 +146,9 @@ export const useNFTs = () => {
         throw new Error('Failed to fetch NFT details');
       }
 
-      const nft: NFT = await response.json();
+      const wrapper = await response.json();
+      const data = wrapper?.data || wrapper; // unwrap { success, data }
+      const nft = mapNFT(data);
       return nft;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch NFT';
@@ -119,44 +171,41 @@ export const useNFTs = () => {
     setError(null);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('token') || localStorage.getItem('access_token');
       if (!token) {
         throw new Error('Authentication required');
       }
 
-      const response = await fetch('/api/nft/buy', {
+      const response = await fetch(`/api/nft/${purchaseData.nftId}/buy`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          nft_id: purchaseData.nftId,
-          currency: purchaseData.currency,
-          payment_method: purchaseData.paymentMethod,
-          email: purchaseData.email,
+          payment_mode: purchaseData.currency,
         }),
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.detail || 'Purchase failed');
+        throw new Error(result.detail || result.message || 'Purchase failed');
       }
 
       // Update the NFT status in local state if it exists
       setNfts(prev => prev.map(nft =>
         nft.id.toString() === purchaseData.nftId
-          ? { ...nft, status: 'sold' as const }
+          ? { ...nft, status: 'sold' as const, is_sold: true }
           : nft
       ));
 
       return {
         success: true,
-        transactionId: result.transaction_id,
-        redirectUrl: result.redirect_url,
-        qrImageUrl: result.qr_image_url,
-        message: result.message || 'Purchase initiated successfully',
+        transactionId: String(result?.data?.transaction_id || result?.transaction_id || ''),
+        redirectUrl: result?.redirect_url,
+        qrImageUrl: result?.qr_image_url,
+        message: result?.message || 'Purchase initiated successfully',
       };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Purchase failed';
@@ -175,7 +224,7 @@ export const useNFTs = () => {
     setError(null);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('token') || localStorage.getItem('access_token');
       if (!token) {
         throw new Error('Authentication required');
       }
@@ -190,8 +239,9 @@ export const useNFTs = () => {
         throw new Error('Failed to fetch purchases');
       }
 
-      const result = await response.json();
-      return result.nfts || [];
+      const wrapper = await response.json();
+      const list = (wrapper?.nfts || wrapper?.data?.nfts || []).map(mapNFT);
+      return list;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch purchases';
       setError(errorMessage);
@@ -208,19 +258,16 @@ export const useNFTs = () => {
     setError(null);
 
     try {
-      const params = new URLSearchParams({
-        search: query,
-        limit: '20',
-      });
-
+      const params = new URLSearchParams({ search: query, limit: '20' });
       const response = await fetch(`/api/nft/search?${params.toString()}`);
 
       if (!response.ok) {
         throw new Error('Search failed');
       }
 
-      const result = await response.json();
-      return result.nfts || [];
+      const wrapper = await response.json();
+      const list = (wrapper?.nfts || wrapper?.data?.nfts || []).map(mapNFT);
+      return list;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Search failed';
       setError(errorMessage);

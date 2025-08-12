@@ -1,55 +1,103 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
-import GoogleLoginButton from '../../components/auth/GoogleLoginButton';
+
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { ErrorBanner } from '../../components/ErrorBanner';
-import { isOAuthCallback, handleOAuthCallback, cleanupOAuthUrl } from '../../lib/auth';
+import { API_ENDPOINTS } from '@/constants/api';
+
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+declare global {
+  interface Window {
+    google: {
+      accounts: {
+        id: {
+          initialize: (config: any) => void;
+          renderButton: (element: HTMLElement, config: any) => void;
+          prompt: () => void;
+        };
+      };
+    };
+  }
+}
 
 const LoginPage: React.FC = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const { isAuthenticated, login, error, isLoading } = useAuth();
+  const { isAuthenticated, error, isLoading } = useAuth();
 
   useEffect(() => {
     // If user is already authenticated, redirect to home
     if (isAuthenticated) {
-      const returnTo = searchParams?.get('returnTo') || '/';
-      router.replace(returnTo);
+      router.replace('/');
       return;
     }
 
-    // Handle OAuth callback if present
-    if (isOAuthCallback()) {
-      handleOAuthCallback();
+    // Inject Google One Tap script
+    if (!window.google && GOOGLE_CLIENT_ID) {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.onload = () => {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: async (response: { credential: string }) => {
+            // Send credential to backend
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ credential: response.credential }),
+            });
+            const data = await res.json();
+            if (data.success && data.data) {
+              localStorage.setItem('token', data.data.access_token);
+              localStorage.setItem('user', JSON.stringify(data.data.user));
+              router.replace('/');
+            } else {
+              alert('Google sign-in failed');
+            }
+          },
+        });
+        window.google.accounts.id.renderButton(
+          document.getElementById('google-one-tap'),
+          { theme: 'outline', size: 'large' }
+        );
+        window.google.accounts.id.prompt();
+      };
+      document.body.appendChild(script);
     }
-  }, [isAuthenticated, router, searchParams]);
+  }, [isAuthenticated, router]);
 
+  // PATCH: Move this useEffect to top level
   useEffect(() => {
-    // Handle OAuth callback
-    const handleCallback = async () => {
-      try {
-        const callbackData = handleOAuthCallback();
-        if (callbackData) {
-          const success = await login(callbackData.code);
-          if (success) {
-            cleanupOAuthUrl();
-            const returnTo = searchParams?.get('returnTo') || '/';
-            router.replace(returnTo);
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('token')
+    if (token) {
+      (async () => {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token }),
+          })
+          const data = await res.json()
+          if (data?.success && data?.data) {
+            const { access_token, refresh_token, user } = data.data
+            localStorage.setItem('token', access_token)
+            if (refresh_token) localStorage.setItem('refresh_token', refresh_token)
+            localStorage.setItem('user', JSON.stringify(user))
+            router.replace('/')
+          } else {
+            alert(data?.message || 'Invalid or expired link')
           }
+        } catch (e) {
+          alert('Failed to verify link')
         }
-      } catch (error) {
-        console.error('OAuth callback error:', error);
-        cleanupOAuthUrl();
-      }
-    };
-
-    if (isOAuthCallback()) {
-      handleCallback();
+      })()
     }
-  }, [login, router, searchParams]);
+  }, [router])
 
   if (isLoading) {
     return (
@@ -60,7 +108,7 @@ const LoginPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
@@ -72,17 +120,51 @@ const LoginPage: React.FC = () => {
         </div>
 
         {error && (
-          <ErrorBanner 
-            error={error} 
-            type="error" 
+          <ErrorBanner
+            error={error}
+            type="error"
             className="mb-6"
           />
         )}
 
+            {/* Magic Link Login */}
+            <div className="space-y-3">
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const form = e.currentTarget as HTMLFormElement;
+                  const formData = new FormData(form);
+                  const email = String(formData.get('email') || '').trim();
+                  if (!email) return;
+                  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/request-link`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email }),
+                  });
+                  const data = await res.json();
+                  if (data?.success) {
+                    alert('Login link sent. Check your email.');
+                  } else {
+                    alert(data?.message || 'Failed to send login link');
+                  }
+                }}
+                className="space-y-3"
+              >
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Enter your email"
+                  className="w-full border rounded-md px-3 py-2"
+                  required
+                />
+                <button type="submit" className="btn-primary w-full">Send Login Link</button>
+              </form>
+            </div>
+
         <div className="bg-white py-8 px-4 shadow-lg rounded-lg sm:px-10">
           <div className="space-y-6">
             <div>
-              <GoogleLoginButton className="w-full" />
+              <div id="google-one-tap" className="mb-6" />
             </div>
 
             <div className="text-center">

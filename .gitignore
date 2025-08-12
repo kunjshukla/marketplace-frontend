@@ -6,3 +6,4 @@ node_modules
 *.env.local
 *.env       <|diff_marker|> /home/kunj/Desktop/nft-marketplace/marketplace-frontend/.gitignore
 .next
+.env.example

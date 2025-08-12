@@ -1,6 +1,5 @@
 // Authentication API functions
 import { API_ENDPOINTS } from '@/constants/api'
-import { GoogleOAuthResponse } from '@/types/user'
 
 export class AuthAPI {
   private static getAuthHeaders(): HeadersInit {
@@ -12,54 +11,11 @@ export class AuthAPI {
   }
 
   /**
-   * Initiate Google OAuth login
-   * Returns the authorization URL for redirect
+   * Initiate Google login (One Tap only)
    */
-  static async initiateGoogleLogin(): Promise<{ authorization_url: string }> {
-    const response = await fetch(API_ENDPOINTS.AUTH.LOGIN_GOOGLE, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || 'Failed to initiate Google login')
-    }
-
-    const result = await response.json()
-    
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to initiate Google login')
-    }
-
-    return result.data
-  }
-
-  /**
-   * Handle Google OAuth callback
-   * Exchange authorization code for tokens
-   */
-  static async handleGoogleCallback(code: string): Promise<GoogleOAuthResponse> {
-    const response = await fetch(API_ENDPOINTS.AUTH.GOOGLE_CALLBACK, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ code }),
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || 'Authentication failed')
-    }
-
-    const result = await response.json()
-    
-    if (!result.success) {
-      throw new Error(result.message || 'Authentication failed')
-    }
-
-    return result.data
+  static async initiateGoogleLogin(): Promise<void> {
+    // No-op: handled by Google Identity Services popup/One Tap
+    return Promise.resolve()
   }
 
   /**
@@ -71,64 +27,28 @@ export class AuthAPI {
         method: 'POST',
         headers: this.getAuthHeaders(),
       })
-
       // Clear local storage regardless of response
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('access_token')
+        localStorage.removeItem('token')
         localStorage.removeItem('refresh_token')
-        localStorage.removeItem('user_data')
+        localStorage.removeItem('user')
       }
-
       if (!response.ok) {
         console.warn('Logout request failed, but local tokens cleared')
         return
       }
-
       const result = await response.json()
       if (!result.success) {
         console.warn('Logout response indicates failure, but local tokens cleared')
       }
     } catch (error) {
       console.warn('Logout request failed, but local tokens cleared:', error)
-      // Clear local storage even if request fails
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('access_token')
+        localStorage.removeItem('token')
         localStorage.removeItem('refresh_token')
-        localStorage.removeItem('user_data')
+        localStorage.removeItem('user')
       }
     }
-  }
-
-  /**
-   * Refresh access token using refresh token
-   */
-  static async refreshToken(): Promise<{ access_token: string }> {
-    const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null
-    
-    if (!refreshToken) {
-      throw new Error('No refresh token available')
-    }
-
-    const response = await fetch(`${API_ENDPOINTS.AUTH.GOOGLE_CALLBACK}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || 'Token refresh failed')
-    }
-
-    const result = await response.json()
-    
-    if (!result.success) {
-      throw new Error(result.message || 'Token refresh failed')
-    }
-
-    return result.data
   }
 
   /**
@@ -139,19 +59,15 @@ export class AuthAPI {
       method: 'GET',
       headers: this.getAuthHeaders(),
     })
-
     if (!response.ok) {
       let detail = 'Token verification failed'
-      try { const err = await response.json(); detail = err.message || err.detail || detail } catch {}
+      try { const err = await response.json(); detail = err.message || err.detail || detail } catch (e) { /* ignore error in parsing error response */ }
       throw new Error(detail)
     }
-
     const result = await response.json()
-    
     if (!result.success) {
       throw new Error(result.message || 'Token verification failed')
     }
-
     return result.data
   }
 }

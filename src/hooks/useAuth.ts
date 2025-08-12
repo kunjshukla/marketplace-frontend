@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import { API_ENDPOINTS } from '@/constants/api';
 
 export interface User {
   id: string;
@@ -92,13 +93,13 @@ export const useAuth = () => {
     setAuthState(prev => ({ ...prev, isLoading: true }));
 
     try {
-      const response = await fetch('/api/auth/login-google', {
+      const response = await fetch(API_ENDPOINTS.AUTH.GOOGLE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          code: googleAuthCode,
+          credential: googleAuthCode,
         }),
       });
 

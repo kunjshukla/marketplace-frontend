@@ -21,8 +21,15 @@ export default function GoogleLoginButton({
       setIsLoading(true)
       onLoginStart?.()
 
-      // Use the configured API endpoint
-      window.location.href = API_ENDPOINTS.AUTH.LOGIN_GOOGLE
+      // For One Tap we just trigger the modal logic elsewhere; keeping placeholder or could integrate directly.
+      // If still needed to initiate classic redirect, replace with window.google.accounts.id.prompt()
+      console.warn('GoogleLoginButton: One Tap flow uses automatic prompt; this button can be hidden or trigger prompt if integrated.')
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.prompt()
+      } else {
+        // Fallback: inform user to use One Tap overlay
+        setIsLoading(false)
+      }
       
     } catch (error) {
       setIsLoading(false)

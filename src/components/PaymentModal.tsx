@@ -1,30 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
+import ReactDOM from 'react-dom'
+import PayPalButton from './payment/PayPalButton'
 
-// import { apiService } from '../services/api' // Service doesn't exist, will implement differently
-
-// Temporary mock implementation for apiService
-const apiService = {
-  purchaseNFT: async (
-    nftId: string,
-    currency: 'INR' | 'USD',
-    // formData?: { name: string; email: string; phone: string }
-  ) => {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    if (currency === 'INR') {
-      return {
-        qr_code: 'https://via.placeholder.com/192x192.png?text=UPI+QR'
-      };
-    } else {
-      return {
-        payment_url: 'https://paypal.com'
-      };
-    }
-  }
-};
+// Remove unused temporary apiService in favor of real backend endpoints
 
 interface PaymentModalProps {
   isOpen: boolean
@@ -38,17 +19,69 @@ interface PaymentModalProps {
   }
   currency: 'INR' | 'USD'
   onPurchaseComplete?: (nftId: number, currency: 'INR' | 'USD') => void
+  transactionId?: number
 }
 
-export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplete }: PaymentModalProps) {
+export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplete, transactionId }: PaymentModalProps) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [step, setStep] = useState(1) // 1: confirm, 2: payment, 3: success
   const [qrCode, setQrCode] = useState('')
   const [error, setError] = useState('')
+  const [imgError, setImgError] = useState(false)
+  // New: UPI deep link and related UI state
+  const [upiLink, setUpiLink] = useState('')
+  const [upiLinkLoading, setUpiLinkLoading] = useState(false)
+  const [upiLinkError, setUpiLinkError] = useState('')
+  const [copied, setCopied] = useState(false)
 
   const price = currency === 'INR' ? nft.price_inr : nft.price_usd
   const currencySymbol = currency === 'INR' ? '₹' : '$'
-  const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('auth_token')
+  const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('token')
+  const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+
+  // Create a portal root for the modal to avoid z-index / stacking issues
+  const portalEl = useMemo(() => {
+    if (typeof document === 'undefined') return null
+    let el = document.getElementById('modal-root') as HTMLDivElement | null
+    if (!el) {
+      el = document.createElement('div')
+      el.id = 'modal-root'
+      document.body.appendChild(el)
+    }
+    return el
+  }, [])
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [isOpen])
+
+  // When we have a transaction id for INR, set QR preview URL from backend
+  useEffect(() => {
+    if (currency === 'INR' && transactionId) {
+      setQrCode(`/api/payment/upi/qr/${transactionId}`)
+      // Also fetch a deep link for tap-to-pay
+      setUpiLink('')
+      setUpiLinkError('')
+      setCopied(false)
+      setUpiLinkLoading(true)
+      fetch(`/api/payment/upi/link/${transactionId}`)
+        .then(r => r.json())
+        .then(d => {
+          if (d?.success && d.upi_link) {
+            setUpiLink(d.upi_link as string)
+          } else {
+            setUpiLinkError(d?.message || 'Unable to get UPI link')
+          }
+        })
+        .catch(() => setUpiLinkError('Unable to get UPI link'))
+        .finally(() => setUpiLinkLoading(false))
+    }
+  }, [currency, transactionId])
 
   const handleConfirmPurchase = async () => {
     setIsProcessing(true)
@@ -61,71 +94,36 @@ export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplet
       return
     }
 
-    // Validate form data for INR purchases
-    if (currency === 'INR') {
-      // const { name, email, phone } = formData
-      // if (!name || !email || !phone) {
-      //   setError('Please fill in all required fields for INR payment')
-      //   setIsProcessing(false)
-      //   return
-      // }
-      
-      // Basic email validation
-      // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      // if (!emailRegex.test(email)) {
-      //   setError('Please enter a valid email address')
-      //   setIsProcessing(false)
-      //   return
-      // }
-      
-      // Basic phone validation
-      // if (phone.length < 10) {
-      //   setError('Please enter a valid phone number')
-      //   setIsProcessing(false)
-      //   return
-      // }
-    }
-
     try {
-      const response: { qr_code?: string; payment_url?: string } = await apiService.purchaseNFT(
-        nft.id.toString(),
-        currency
-      );
-      if (currency === 'INR') {
-        setQrCode(response.qr_code || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
-      } else {
-        // In a real app, you would redirect to PayPal
-        window.open(response.payment_url || 'https://paypal.com', '_blank');
-      }
-      setStep(2);
+      // Backend will create transaction on /api/nft/:id/buy, we already did that before opening this modal.
+      // Move straight to Step 2 to render the payment method.
+      setStep(2)
     } catch (err: unknown) {
       if (err instanceof Error) {
-        setError(err.message);
+        setError(err.message)
       } else {
-        setError('Failed to initiate purchase');
+        setError('Failed to initiate purchase')
       }
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false)
     }
   }
 
   const handlePaymentComplete = async () => {
-    setIsProcessing(true);
-    setError('');
+    setIsProcessing(true)
+    setError('')
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setStep(3);
-      if (onPurchaseComplete) {
-        onPurchaseComplete(nft.id, currency);
-      }
+      await new Promise(resolve => setTimeout(resolve, 800))
+      setStep(3)
+      onPurchaseComplete?.(nft.id, currency)
     } catch (err: unknown) {
       if (err instanceof Error) {
-        setError(err.message);
+        setError(err.message)
       } else {
-        setError('Payment confirmation failed');
+        setError('Payment confirmation failed')
       }
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false)
     }
   }
 
@@ -133,14 +131,36 @@ export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplet
     setStep(1)
     setError('')
     setQrCode('')
+    setImgError(false)
+    setUpiLink('')
+    setUpiLinkError('')
+    setCopied(false)
     onClose()
   }
 
-  if (!isOpen) return null
+  const retryQr = () => {
+    if (transactionId) {
+      setQrCode(`/api/payment/upi/qr/${transactionId}?t=${Date.now()}`)
+      setError('')
+    }
+  }
 
-  return (
+  const copyUpiLink = async () => {
+    if (!upiLink) return
+    try {
+      await navigator.clipboard.writeText(upiLink)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      setUpiLinkError('Copy failed')
+    }
+  }
+
+  if (!isOpen || !portalEl) return null
+
+  const content = (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-screen overflow-y-auto">
+      <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-screen overflow-y-auto shadow-2xl">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900">
             {step === 1 && 'Confirm Purchase'}
@@ -167,17 +187,23 @@ export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplet
         {step === 1 && (
           <div>
             <div className="mb-6">
-              <Image
-                src={nft.image_url}
-                alt={nft.title}
-                width={600}
-                height={192}
-                className="w-full h-48 object-cover rounded-lg mb-4"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = '/images/nft-placeholder.png';
-                }}
-              />
+              <div className="w-full h-48 rounded-lg mb-4 overflow-hidden bg-gray-100">
+                {!imgError ? (
+                  <Image
+                    src={nft.image_url}
+                    alt={nft.title}
+                    width={600}
+                    height={192}
+                    className="w-full h-48 object-cover"
+                    onError={() => setImgError(true)}
+                    priority
+                  />
+                ) : (
+                  <div className="w-full h-48 flex items-center justify-center text-gray-500">
+                    Preview unavailable
+                  </div>
+                )}
+              </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
                 {nft.title}
               </h3>
@@ -192,24 +218,6 @@ export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplet
             </div>
 
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-2">Purchase Summary</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>NFT Price:</span>
-                  <span>{currencySymbol}{price.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Platform Fee (2.5%):</span>
-                  <span>{currencySymbol}{Math.round(price * 0.025).toLocaleString()}</span>
-                </div>
-                <div className="border-t pt-2 flex justify-between font-semibold">
-                  <span>Total:</span>
-                  <span>{currencySymbol}{Math.round(price * 1.025).toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-6">
               <h4 className="font-semibold text-gray-900 mb-2">Payment Method</h4>
               <div className="text-sm text-gray-600">
                 {currency === 'INR' ? (
@@ -217,7 +225,7 @@ export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplet
                     <span className="text-2xl mr-2">📱</span>
                     <div>
                       <div className="font-medium">UPI Payment</div>
-                      <div className="text-xs">Scan QR code with any UPI app</div>
+                      <div className="text-xs">Scan QR code or tap link with any UPI app</div>
                     </div>
                   </div>
                 ) : (
@@ -235,11 +243,11 @@ export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplet
             <button
               onClick={handleConfirmPurchase}
               disabled={isProcessing}
-              className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
+              className={`${
                 isProcessing
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700 text-white'
-              }`}
+              } w-full py-3 px-4 rounded-lg font-medium transition-colors`}
             >
               {isProcessing ? (
                 <div className="flex items-center justify-center">
@@ -259,18 +267,72 @@ export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplet
             {currency === 'INR' ? (
               <div>
                 <div className="text-6xl mb-4">📱</div>
-                <h3 className="text-xl font-semibold mb-4">Scan QR Code to Pay</h3>
+                <h3 className="text-xl font-semibold mb-2">Scan QR Code to Pay</h3>
+                <p className="text-xs text-gray-500 mb-4">Each QR and link are unique to this transaction.</p>
                 <div className="bg-white p-4 rounded-lg border-2 border-gray-200 mb-4 inline-block">
                   {qrCode ? (
-                    <Image src={qrCode} alt="UPI QR Code" width={192} height={192} className="w-48 h-48" />
+                    <Image 
+                      src={qrCode} 
+                      alt="UPI QR Code" 
+                      width={192} 
+                      height={192} 
+                      className="w-48 h-48" 
+                      onError={() => setError('Unable to load QR code. Please try again.')}
+                    />
                   ) : (
                     <div className="w-48 h-48 bg-gray-100 flex items-center justify-center">
                       <span className="text-gray-500">Loading QR Code...</span>
                     </div>
                   )}
                 </div>
+                {!transactionId && (
+                  <p className="text-xs text-red-600 mb-2">Missing transaction reference. Please retry purchase.</p>
+                )}
+                {error && (
+                  <div className="mb-3">
+                    <button onClick={retryQr} className="text-sm text-blue-600 hover:underline">Retry loading QR</button>
+                  </div>
+                )}
+
+                {/* Tap-to-pay and utilities */}
+                <div className="flex flex-col gap-2 items-center mb-4">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={retryQr}
+                      className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                    >
+                      Reload QR
+                    </button>
+                    {upiLink && (
+                      <a
+                        href={upiLink}
+                        className="px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                        rel="noreferrer"
+                      >
+                        {isMobile ? 'Open in UPI app' : 'Open UPI link'}
+                      </a>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    {upiLink && (
+                      <button
+                        onClick={copyUpiLink}
+                        className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                      >
+                        {copied ? 'Link copied!' : 'Copy UPI link'}
+                      </button>
+                    )}
+                    {upiLinkLoading && (
+                      <span className="text-xs text-gray-500 self-center">Fetching link…</span>
+                    )}
+                    {upiLinkError && (
+                      <span className="text-xs text-red-600 self-center">{upiLinkError}</span>
+                    )}
+                  </div>
+                </div>
+
                 <p className="text-sm text-gray-600 mb-6">
-                  Use any UPI app like PhonePe, Paytm, or Google Pay to scan and pay
+                  Use any UPI app like PhonePe, Paytm, or Google Pay to scan or tap and pay
                 </p>
                 <div className="text-2xl font-bold text-blue-600 mb-6">
                   {currencySymbol}{Math.round(price * 1.025).toLocaleString()}
@@ -279,10 +341,20 @@ export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplet
             ) : (
               <div>
                 <div className="text-6xl mb-4">💳</div>
-                <h3 className="text-xl font-semibold mb-4">Complete PayPal Payment</h3>
-                <p className="text-gray-600 mb-6">
-                  A new window has opened for PayPal payment. Complete the payment and return here.
-                </p>
+                <h3 className="text-xl font-semibold mb-4">Pay with PayPal</h3>
+                <div className="mb-4">
+                  <PayPalButton
+                    amount={Math.round(price * 1.025)}
+                    currency={'USD'}
+                    nftId={String(nft.id)}
+                    onSuccess={() => {
+                      setStep(3)
+                      onPurchaseComplete?.(nft.id, 'USD')
+                    }}
+                    onError={(e) => setError((e as any)?.message || 'PayPal payment failed')}
+                    onCancel={() => setError('Payment cancelled')}
+                  />
+                </div>
                 <div className="text-2xl font-bold text-blue-600 mb-6">
                   {currencySymbol}{Math.round(price * 1.025).toLocaleString()}
                 </div>
@@ -290,29 +362,10 @@ export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplet
             )}
 
             <button
-              onClick={handlePaymentComplete}
-              disabled={isProcessing}
-              className={`w-full py-3 px-4 rounded-lg font-medium transition-colors mb-4 ${
-                isProcessing
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              }`}
-            >
-              {isProcessing ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Confirming...
-                </div>
-              ) : (
-                'I have completed the payment'
-              )}
-            </button>
-
-            <button
               onClick={handleClose}
-              className="w-full py-2 px-4 text-gray-600 hover:text-gray-800 transition-colors"
+              className="w-full py-2 px-4 text-gray-600 hover:text-gray-800 transition-colors mt-2"
             >
-              Cancel
+              Close
             </button>
           </div>
         )}
@@ -366,4 +419,6 @@ export function PaymentModal({ isOpen, onClose, nft, currency, onPurchaseComplet
       </div>
     </div>
   )
+
+  return ReactDOM.createPortal(content, portalEl)
 }

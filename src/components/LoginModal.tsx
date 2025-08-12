@@ -2,53 +2,138 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { API_ENDPOINTS } from '../constants/api'
 
 interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
+declare global {
+  interface Window {
+    google: {
+      accounts: {
+        id: {
+          initialize: (config: any) => void
+          renderButton: (element: HTMLElement, config: any) => void
+          prompt: () => void
+        }
+      }
+    }
+  }
+}
+
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
-  const { login, isLoading, error } = useAuth()
+  const { isLoading, error } = useAuth()
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [localError, setLocalError] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
+      if (!document.getElementById('google-identity-script')) {
+        const script = document.createElement('script')
+        script.id = 'google-identity-script'
+        script.src = 'https://accounts.google.com/gsi/client'
+        script.async = true
+        script.defer = true
+        document.head.appendChild(script)
+        script.onload = () => initializeGoogleSignIn()
+      } else if (window.google) {
+        initializeGoogleSignIn()
+      }
     } else {
       document.body.style.overflow = 'unset'
     }
-
-    return () => {
-      document.body.style.overflow = 'unset'
-    }
+    return () => { document.body.style.overflow = 'unset' }
   }, [isOpen])
 
-  const handleGoogleLogin = async () => {
+  const initializeGoogleSignIn = () => {
+    if (!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) {
+      console.error('Google Client ID not configured')
+      setLocalError('Google authentication is not configured')
+      return
+    }
+    if (window.google) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+          callback: handleCredentialResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+          use_fedcm_for_prompt: true
+        })
+        const btn = document.getElementById('google-btn-container')
+        if (btn) {
+          window.google.accounts.id.renderButton(btn, {
+            type: 'standard',
+            theme: 'filled_black',
+            size: 'large',
+            text: 'signin_with',
+            shape: 'rectangular'
+          })
+        }
+      } catch (e) {
+        console.error('Failed to initialize Google Sign-In:', e)
+        setLocalError('Failed to initialize Google Sign-In')
+      }
+    }
+  }
+
+  const handleCredentialResponse = async (response: any) => {
     setIsGoogleLoading(true)
     try {
-      // Redirect to Google OAuth
-      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
-      const redirectUri = process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/callback`
-
-      if (!clientId) {
-        console.error('Google Client ID not configured')
-        return
-      }
-
-      const params = new URLSearchParams({
-        client_id: clientId,
-        redirect_uri: redirectUri,
-        response_type: 'code',
-        scope: 'openid profile email',
-        access_type: 'offline',
-        prompt: 'consent'
+      const backendResponse = await fetch(API_ENDPOINTS.AUTH.GOOGLE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential })
       })
 
-      window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
+      const result = await backendResponse.json()
+      
+      if (result.success && result.data) {
+        const { access_token, refresh_token, user } = result.data
+        
+        // Store tokens with consistent naming
+        localStorage.setItem('token', access_token)
+        if (refresh_token) {
+          localStorage.setItem('refresh_token', refresh_token)
+        }
+        localStorage.setItem('user', JSON.stringify(user))
+        
+        // Close modal and reload to trigger auth context update
+        onClose()
+        window.location.reload()
+      } else {
+        console.error('Login failed:', result.message || 'Unknown error')
+        setLocalError(result.message || 'Login failed')
+      }
     } catch (error) {
       console.error('Google login error:', error)
+      setLocalError('Login failed. Please try again.')
+    } finally {
       setIsGoogleLoading(false)
+    }
+  }
+
+  const handleGoogleLogin = () => {
+    if (!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) {
+      setLocalError('Google authentication is not configured')
+      return
+    }
+    if (window.google) {
+      setIsGoogleLoading(true)
+      try {
+        // Trigger One Tap / popup prompt (credential only)
+        window.google.accounts.id.prompt()
+        setIsGoogleLoading(false)
+      } catch (e) {
+        console.error('Failed to start Google Sign-In:', e)
+        setLocalError('Failed to start Google Sign-In')
+        setIsGoogleLoading(false)
+      }
+    } else {
+      setLocalError('Google Sign-In is not available')
     }
   }
 
@@ -85,12 +170,14 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           </div>
 
           <div className="px-6 pb-6">
-            {error && (
+            {(error || localError) && (
               <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                {error}
+                {error || localError}
               </div>
             )}
 
+            <div id="google-btn-container" className="mb-4 flex justify-center" />
+            <div className="text-center text-white/40 text-xs mb-4">or</div>
             <button
               onClick={handleGoogleLogin}
               disabled={isLoading || isGoogleLoading}

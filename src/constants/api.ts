@@ -4,8 +4,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 export const API_ENDPOINTS = {
   // Authentication
   AUTH: {
-    LOGIN_GOOGLE: `${API_BASE_URL}/api/auth/login-google`,
-    GOOGLE_CALLBACK: `${API_BASE_URL}/api/auth/google/callback`,
+    GOOGLE: `${API_BASE_URL}/api/auth/google`,
+    MAGIC_REQUEST: `${API_BASE_URL}/api/auth/request-link`,
+    MAGIC_VERIFY: `${API_BASE_URL}/api/auth/verify-link`,
     LOGOUT: `${API_BASE_URL}/api/auth/logout`,
     ME: `${API_BASE_URL}/api/auth/me`,
   },

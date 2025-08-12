@@ -12,7 +12,7 @@ interface NFTBuyFormProps {
     is_sold: boolean
     is_reserved: boolean
   }
-  onPurchaseStart?: (paymentMode: 'INR' | 'USD') => void
+  onPurchaseStart?: (paymentMode: 'INR' | 'USD', transactionId?: number) => void
   onPurchaseError?: (error: string) => void
   className?: string
 }
@@ -44,11 +44,14 @@ export default function NFTBuyForm({
     try {
       setIsLoading(true)
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/nft/${nft.id}/buy`, {
+      const token = localStorage.getItem('token') || localStorage.getItem('access_token')
+      if (!token) throw new Error('Authentication required')
+
+      const response = await fetch(`/api/nft/${nft.id}/buy`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           payment_mode: selectedPayment
@@ -56,14 +59,15 @@ export default function NFTBuyForm({
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Purchase failed')
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.message || error.detail || 'Purchase failed')
       }
 
       const result = await response.json()
       
       if (result.success) {
-        onPurchaseStart?.(selectedPayment)
+        const txId: number | undefined = result.data?.transaction_id ?? result.transaction_id
+        onPurchaseStart?.(selectedPayment, txId)
       } else {
         throw new Error(result.message || 'Purchase failed')
       }
@@ -175,8 +179,8 @@ export default function NFTBuyForm({
             </p>
             <p className="text-blue-800">
               {selectedPayment === 'INR' 
-                ? 'After clicking &quot;Buy Now&quot;, you&apos;ll receive a UPI QR code via email. Complete the payment and submit the transaction reference for verification.'
-                : 'You&apos;ll be redirected to PayPal to complete the payment securely. The NFT will be transferred immediately after successful payment.'
+                ? 'After clicking &quot;Buy Now&quot;, you\'ll receive a UPI QR code via email. Complete the payment and submit the transaction reference for verification.'
+                : 'You\'ll see PayPal buttons to complete the payment securely. The NFT will be transferred immediately after successful payment.'
               }
             </p>
           </div>

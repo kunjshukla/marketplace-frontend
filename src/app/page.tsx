@@ -7,6 +7,7 @@ import { HeroSection } from '../components/HeroSection'
 import { SearchBar } from '../components/SearchBar'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { nftApi } from '../lib/api/nft'
+import { fallbackNFTs } from '../data/fallback-nfts'
 
 const categories = ['art', 'collectible', 'gaming', 'music']
 const sortOptions = [
@@ -20,7 +21,7 @@ const sortOptions = [
 ]
 
 // Premium fallback NFTs with local image assets
-const fallbackNFTs = [
+const fallbackNFTsData = [
   {
     id: 101,
     title: 'Digital Horizon #001',
@@ -171,10 +172,10 @@ export default function HomePage() {
     try {
       setLoading(true)
       const response = await nftApi.list({}, 1, 50)
-      setNfts(Array.isArray(response.nfts) && response.nfts.length > 0 ? response.nfts : fallbackNFTs)
+      setNfts(Array.isArray(response.nfts) && response.nfts.length > 0 ? response.nfts : fallbackNFTsData)
     } catch (err) {
       console.warn('API failed, using fallback data:', err)
-      setNfts(fallbackNFTs)
+      setNfts(fallbackNFTsData)
     } finally {
       setLoading(false)
     }
