@@ -9,7 +9,7 @@ import Button from '../../components/common/Button';
 import Image from 'next/image';
 import { NFT } from '../../types/nft';
 
-const PurchasePage: React.FC = () => {
+const PurchasePageContent: React.FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { checkPaymentStatus } = usePayment();
@@ -151,165 +151,172 @@ const PurchasePage: React.FC = () => {
   const statusInfo = renderStatusMessage();
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto">
-          {/* Back Navigation */}
-          <Button
-            onClick={() => router.push('/')}
-            variant="outline"
-            className="mb-6 inline-flex items-center gap-2"
-          >
-            <ArrowLeft size={16} />
-            Back to Marketplace
-          </Button>
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl mx-auto">
+        {/* Back Navigation */}
+        <Button
+          onClick={() => router.push('/')}
+          variant="outline"
+          className="mb-6 inline-flex items-center gap-2"
+        >
+          <ArrowLeft size={16} />
+          Back to Marketplace
+        </Button>
 
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            {/* Status Section */}
-            <div className="px-6 py-8 text-center border-b border-gray-200">
-              {renderStatusIcon()}
-              <h1 className={`text-2xl font-bold mt-4 mb-2 ${statusInfo.className}`}>
-                {statusInfo.title}
-              </h1>
-              <p className="text-gray-600 max-w-md mx-auto">
-                {statusInfo.message}
-              </p>
-            </div>
-
-            {/* Transaction Details */}
-            {paymentDetails && (
-              <div className="px-6 py-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Transaction Details</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">Transaction ID:</span>
-                    <div className="font-mono text-gray-900 break-all">
-                      {paymentDetails.transaction_id}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Amount:</span>
-                    <div className="font-semibold text-gray-900">
-                      {formatAmount(paymentDetails.amount, paymentDetails.currency)}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Payment Method:</span>
-                    <div className="font-semibold text-gray-900 capitalize">
-                      {paymentDetails.payment_method}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Date:</span>
-                    <div className="text-gray-900">
-                      {new Date(paymentDetails.created_at).toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* NFT Details */}
-            {nft && (
-              <div className="px-6 py-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">NFT Details</h3>
-                <div className="flex gap-4">
-                  <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                    <Image
-                      src={nft.image_url}
-                      alt={nft.title}
-                      width={80}
-                      height={80}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/images/nft-placeholder.png';
-                      }}
-                    />
-                  </div>
-                  <div className="flex-grow">
-                    <h4 className="font-semibold text-gray-900">{nft.title}</h4>
-                    <p className="text-sm text-gray-600 mb-1">
-                      {/* by {nft.creator || 'Unknown Artist'} */}
-                    </p>
-                    <p className="text-sm text-gray-500 capitalize">
-                      {nft.category}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="px-6 py-6">
-              <div className="flex flex-col sm:flex-row gap-3">
-                {status === 'success' && (
-                  <>
-                    <Button
-                      onClick={() => router.push('/profile/collection')}
-                      className="flex-1 inline-flex items-center justify-center gap-2"
-                    >
-                      <Receipt size={16} />
-                      View Collection
-                    </Button>
-                    <Button
-                      onClick={handleDownloadReceipt}
-                      variant="outline"
-                      className="flex-1 inline-flex items-center justify-center gap-2"
-                    >
-                      <Download size={16} />
-                      Download Receipt
-                    </Button>
-                  </>
-                )}
-                
-                {status === 'failed' && (
-                  <>
-                    <Button
-                      onClick={() => router.push(`/nft/${nftId}`)}
-                      className="flex-1"
-                    >
-                      Try Again
-                    </Button>
-                    <Button
-                      onClick={() => router.push('/support')}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      Contact Support
-                    </Button>
-                  </>
-                )}
-
-                {status === 'pending' && paymentMethod === 'upi' && (
-                  <Button
-                    onClick={checkPurchaseStatus}
-                    variant="outline"
-                    className="w-full inline-flex items-center justify-center gap-2"
-                    // Button is always enabled here since status is 'pending'
-                  >
-                    Check Payment Status
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Help Text */}
-          <div className="mt-6 text-center text-sm text-gray-500">
-            <p>
-              Need help? Contact our{' '}
-              <a href="/support" className="underline hover:text-gray-700">
-                support team
-              </a>{' '}
-              or check our{' '}
-              <a href="/faq" className="underline hover:text-gray-700">
-                FAQ
-              </a>
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          {/* Status Section */}
+          <div className="px-6 py-8 text-center border-b border-gray-200">
+            {renderStatusIcon()}
+            <h1 className={`text-2xl font-bold mt-4 mb-2 ${statusInfo.className}`}>
+              {statusInfo.title}
+            </h1>
+            <p className="text-gray-600 max-w-md mx-auto">
+              {statusInfo.message}
             </p>
           </div>
+
+          {/* Transaction Details */}
+          {paymentDetails && (
+            <div className="px-6 py-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Transaction Details</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-600">Transaction ID:</span>
+                  <div className="font-mono text-gray-900 break-all">
+                    {paymentDetails.transaction_id}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-gray-600">Amount:</span>
+                  <div className="font-semibold text-gray-900">
+                    {formatAmount(paymentDetails.amount, paymentDetails.currency)}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-gray-600">Payment Method:</span>
+                  <div className="font-semibold text-gray-900 capitalize">
+                    {paymentDetails.payment_method}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-gray-600">Date:</span>
+                  <div className="text-gray-900">
+                    {new Date(paymentDetails.created_at).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* NFT Details */}
+          {nft && (
+            <div className="px-6 py-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">NFT Details</h3>
+              <div className="flex gap-4">
+                <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                  <Image
+                    src={nft.image_url}
+                    alt={nft.title}
+                    width={80}
+                    height={80}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/images/nft-placeholder.png';
+                    }}
+                  />
+                </div>
+                <div className="flex-grow">
+                  <h4 className="font-semibold text-gray-900">{nft.title}</h4>
+                  <p className="text-sm text-gray-600 mb-1">
+                    {/* by {nft.creator || 'Unknown Artist'} */}
+                  </p>
+                  <p className="text-sm text-gray-500 capitalize">
+                    {nft.category}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="px-6 py-6">
+            <div className="flex flex-col sm:flex-row gap-3">
+              {status === 'success' && (
+                <>
+                  <Button
+                    onClick={() => router.push('/profile/collection')}
+                    className="flex-1 inline-flex items-center justify-center gap-2"
+                  >
+                    <Receipt size={16} />
+                    View Collection
+                  </Button>
+                  <Button
+                    onClick={handleDownloadReceipt}
+                    variant="outline"
+                    className="flex-1 inline-flex items-center justify-center gap-2"
+                  >
+                    <Download size={16} />
+                    Download Receipt
+                  </Button>
+                </>
+              )}
+              
+              {status === 'failed' && (
+                <>
+                  <Button
+                    onClick={() => router.push(`/nft/${nftId}`)}
+                    className="flex-1"
+                  >
+                    Try Again
+                  </Button>
+                  <Button
+                    onClick={() => router.push('/support')}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Contact Support
+                  </Button>
+                </>
+              )}
+
+              {status === 'pending' && paymentMethod === 'upi' && (
+                <Button
+                  onClick={checkPurchaseStatus}
+                  variant="outline"
+                  className="w-full inline-flex items-center justify-center gap-2"
+                  // Button is always enabled here since status is 'pending'
+                >
+                  Check Payment Status
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Help Text */}
+        <div className="mt-6 text-center text-sm text-gray-500">
+          <p>
+            Need help? Contact our{' '}
+            <a href="/support" className="underline hover:text-gray-700">
+              support team
+            </a>{' '}
+            or check our{' '}
+            <a href="/faq" className="underline hover:text-gray-700">
+              FAQ
+            </a>
+            .
+          </p>
         </div>
       </div>
+    </div>
+  );
+};
+
+const PurchasePage: React.FC = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PurchasePageContent />
     </Suspense>
   );
 };

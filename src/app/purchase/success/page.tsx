@@ -2,7 +2,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function PurchaseSuccessPage() {
+function PurchaseSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'pending'|'success'|'error'>('pending');
@@ -44,13 +44,19 @@ export default function PurchaseSuccessPage() {
   }, [searchParams]);
 
   return (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <h1 className="text-2xl font-bold mb-4">Purchase Status</h1>
+      {status === 'pending' && <p>Processing payment...</p>}
+      {status === 'success' && <p className="text-green-600">{message}</p>}
+      {status === 'error' && <p className="text-red-600">{message}</p>}
+    </div>
+  );
+}
+
+export default function PurchaseSuccessPage() {
+  return (
     <Suspense fallback={<div>Loading...</div>}>
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <h1 className="text-2xl font-bold mb-4">Purchase Status</h1>
-        {status === 'pending' && <p>Processing payment...</p>}
-        {status === 'success' && <p className="text-green-600">{message}</p>}
-        {status === 'error' && <p className="text-red-600">{message}</p>}
-      </div>
+      <PurchaseSuccessContent />
     </Suspense>
   );
 }
