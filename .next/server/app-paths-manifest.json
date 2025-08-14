@@ -4,6 +4,6 @@
   "/auth/callback/page": "app/auth/callback/page.js",
   "/page": "app/page.js",
   "/login/page": "app/login/page.js",
-  "/purchase/success/page": "app/purchase/success/page.js",
-  "/purchase/page": "app/purchase/page.js"
+  "/purchase/page": "app/purchase/page.js",
+  "/purchase/success/page": "app/purchase/success/page.js"
 }

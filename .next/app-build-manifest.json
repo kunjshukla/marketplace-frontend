@@ -25,7 +25,7 @@
       "static/chunks/571-e0f3e5977fd6a4cb.js",
       "static/chunks/207-4e21de67dd93c33c.js",
       "static/chunks/377-14b6491c1aecf50f.js",
-      "static/chunks/app/nft/[id]/page-a0698d28538d55a8.js"
+      "static/chunks/app/nft/[id]/page-d751124829e8663d.js"
     ],
     "/auth/callback/page": [
       "static/chunks/webpack-1796d5ecd61cbd74.js",
@@ -50,13 +50,6 @@
       "static/chunks/main-app-ee24744ad0ca7f91.js",
       "static/chunks/app/login/page-b3cf1de0cbc64ee0.js"
     ],
-    "/purchase/success/page": [
-      "static/chunks/webpack-1796d5ecd61cbd74.js",
-      "static/chunks/fd9d1056-66f7dadb04bf2e27.js",
-      "static/chunks/23-a3dac477264a95c1.js",
-      "static/chunks/main-app-ee24744ad0ca7f91.js",
-      "static/chunks/app/purchase/success/page-f96d724e2070ffb6.js"
-    ],
     "/purchase/page": [
       "static/chunks/webpack-1796d5ecd61cbd74.js",
       "static/chunks/fd9d1056-66f7dadb04bf2e27.js",
@@ -65,6 +58,13 @@
       "static/chunks/648-a64de88061609068.js",
       "static/chunks/571-e0f3e5977fd6a4cb.js",
       "static/chunks/app/purchase/page-ffa4f6377b0a0fe7.js"
+    ],
+    "/purchase/success/page": [
+      "static/chunks/webpack-1796d5ecd61cbd74.js",
+      "static/chunks/fd9d1056-66f7dadb04bf2e27.js",
+      "static/chunks/23-a3dac477264a95c1.js",
+      "static/chunks/main-app-ee24744ad0ca7f91.js",
+      "static/chunks/app/purchase/success/page-f96d724e2070ffb6.js"
     ]
   }
 }
