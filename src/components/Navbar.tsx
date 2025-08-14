@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import LoginModal from './LoginModal'
-import { NavLinks } from './common/NavLinks'
 import { Logo } from './common/Logo'
 
 export function Navbar() {
@@ -27,7 +26,7 @@ export function Navbar() {
 
             {/* Navigation Links - Desktop */}
             <div className="hidden md:flex items-center space-x-8">
-              <NavLinks />
+              {/* NavLinks removed for initial deployment */}
             </div>
 
             {/* Right side - Auth buttons */}
@@ -103,7 +102,7 @@ export function Navbar() {
         {isMobileMenuOpen && (
           <div className="md:hidden glass-card border-t border-white/10">
             <div className="px-6 pt-4 pb-6 space-y-4">
-              <NavLinks mobile={isMobileMenuOpen} />
+              {/* NavLinks removed for initial deployment */}
               
               <div className="pt-4 border-t border-white/10">
                 {isAuthenticated && user ? (
